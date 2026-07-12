@@ -1,0 +1,6 @@
+{
+  "name": "StadiumGPT",
+  "description": "Smart Stadiums & Tournament Operations platform for FIFA World Cup 2026. Empowering staff and fans with real-time operational assistance and predictive AI analytics.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
