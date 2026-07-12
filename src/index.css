@@ -51,3 +51,30 @@ body {
   border-color: rgba(197, 160, 89, 0.4);
   box-shadow: 0 0 15px rgba(197, 160, 89, 0.08);
 }
+
+@keyframes routeFlow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.animate-route-flow {
+  stroke-dasharray: 6, 3;
+  animation: routeFlow 1.2s linear infinite;
+}
+
+@keyframes pulseBorder {
+  0%, 100% {
+    border-color: rgba(197, 160, 89, 0.2);
+    box-shadow: 0 0 5px rgba(197, 160, 89, 0.05);
+  }
+  50% {
+    border-color: rgba(197, 160, 89, 0.8);
+    box-shadow: 0 0 15px rgba(197, 160, 89, 0.25);
+  }
+}
+
+.animate-pulse-gold {
+  animation: pulseBorder 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+

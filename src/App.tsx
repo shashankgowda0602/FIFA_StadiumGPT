@@ -23,6 +23,7 @@ import DecisionSupport from "./components/DecisionSupport.js";
 import AnalyticsDashboard from "./components/AnalyticsDashboard.js";
 import IncidentTaskCenter from "./components/IncidentTaskCenter.js";
 import StadiumConfigurator from "./components/StadiumConfigurator.js";
+import DiagnosticsSuite from "./components/DiagnosticsSuite.js";
 
 import { 
   Bell, 
@@ -46,7 +47,7 @@ export default function App() {
   const [stadiums, setStadiums] = React.useState<Stadium[]>([]);
   const [selectedStadiumId, setSelectedStadiumId] = React.useState<string>("");
   const [currentRole, setCurrentRole] = React.useState<UserRole>(UserRole.FOOTBALL_FAN);
-  const [activeTab, setActiveTab] = React.useState<"MAP" | "ANALYTICS" | "DECISION" | "SAFETY">("MAP");
+  const [activeTab, setActiveTab] = React.useState<"MAP" | "ANALYTICS" | "DECISION" | "SAFETY" | "TESTING">("MAP");
   const [loading, setLoading] = React.useState(true);
 
   // Platform Notification Feed State
@@ -614,6 +615,21 @@ export default function App() {
             <ShieldAlert className="w-4 h-4" />
             Incidents & Staff Tasks
           </button>
+
+          <button
+            onClick={() => setActiveTab("TESTING")}
+            className={`flex items-center gap-2 px-5 py-2.5 font-medium text-xs uppercase tracking-[0.1em] border-b-2 transition-all cursor-pointer ${
+              activeTab === "TESTING" 
+                ? "border-[#C5A059] text-[#C5A059]" 
+                : "border-transparent text-white/50 hover:text-white"
+            }`}
+            id="tab-btn-testing"
+            aria-controls="bento-testing-viewport"
+            aria-selected={activeTab === "TESTING"}
+          >
+            <CheckCircle className="w-4 h-4" />
+            Compliance & Testing
+          </button>
         </div>
 
         {/* Tab contents */}
@@ -665,6 +681,17 @@ export default function App() {
                 onUpdateIncident={handleUpdateIncident}
                 onAddTask={handleAddTask}
                 onUpdateTask={handleUpdateTask}
+              />
+            </div>
+          )}
+
+          {/* 5. DIAGNOSTICS, COMPLIANCE & SECURITY SUITE */}
+          {activeTab === "TESTING" && (
+            <div className="animate-in fade-in" id="bento-testing-viewport">
+              <DiagnosticsSuite 
+                stadium={activeStadium} 
+                stadiums={stadiums}
+                currentUserRole={currentRole}
               />
             </div>
           )}

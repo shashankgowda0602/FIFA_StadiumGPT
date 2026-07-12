@@ -25,7 +25,13 @@ import {
   Sparkles,
   RefreshCw,
   Eye,
-  ChevronRight
+  ChevronRight,
+  AlertOctagon,
+  ArrowRight,
+  Footprints,
+  PlayCircle,
+  ShieldAlert,
+  Check
 } from "lucide-react";
 
 interface InteractiveMapProps {
@@ -42,6 +48,13 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
   const [navigationEnd, setNavigationEnd] = React.useState<string>("");
   const [showNavigationResult, setShowNavigationResult] = React.useState(false);
   const [routeLine, setRouteLine] = React.useState<{ x1: number, y1: number, x2: number, y2: number }[]>([]);
+  const [routePoints, setRoutePoints] = React.useState<{ x: number, y: number }[]>([]);
+  
+  // Simulated walk state
+  const [simulatedProgress, setSimulatedProgress] = React.useState<number | null>(null);
+  const [isSimulating, setIsSimulating] = React.useState(false);
+  const simulationTimerRef = React.useRef<any>(null);
+
   const [zoomLevel, setZoomLevel] = React.useState(1);
   const [mapOffset, setMapOffset] = React.useState({ x: 0, y: 0 });
   const [isEditing, setIsEditing] = React.useState(false);
@@ -68,7 +81,22 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
     setNavigationEnd("");
     setShowNavigationResult(false);
     setRouteLine([]);
+    setRoutePoints([]);
+    setSimulatedProgress(null);
+    setIsSimulating(false);
+    if (simulationTimerRef.current) {
+      clearInterval(simulationTimerRef.current);
+    }
   }, [stadium]);
+
+  // Clear simulation timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (simulationTimerRef.current) {
+        clearInterval(simulationTimerRef.current);
+      }
+    };
+  }, []);
 
   // Render Category colors
   const getCategoryColor = (category: FacilityCategory) => {
@@ -125,27 +153,244 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
     return matchesCategory && matchesSearch;
   });
 
-  // Calculate simulated pathing on map
+  // Calculate simulated pathing on map avoiding the pitch (wrapping around pitch at R = 37)
   const handleCalculateNavigation = () => {
     if (!navigationStart || !navigationEnd) return;
     const startFac = stadium.facilities.find(f => f.id === navigationStart);
     const endFac = stadium.facilities.find(f => f.id === navigationEnd);
 
     if (startFac && endFac) {
-      // Create a nice multi-segment route between coordinates
-      // Segment 1: start -> concourse ring (x=50, y=50) -> target
-      const xMid = 50;
-      const yMid = 50;
+      // Clear current simulation
+      if (simulationTimerRef.current) {
+        clearInterval(simulationTimerRef.current);
+      }
+      setSimulatedProgress(null);
+      setIsSimulating(false);
 
-      const lines = [
-        { x1: startFac.longitude, y1: startFac.latitude, x2: xMid, y2: yMid },
-        { x1: xMid, y1: yMid, x2: endFac.longitude, y2: endFac.latitude }
-      ];
+      const cx = 50;
+      const cy = 50;
+      const R = 37;
+
+      const x1 = startFac.longitude;
+      const y1 = startFac.latitude;
+      const x2 = endFac.longitude;
+      const y2 = endFac.latitude;
+
+      const a1 = Math.atan2(y1 - cy, x1 - cx);
+      const a2 = Math.atan2(y2 - cy, x2 - cx);
+
+      // Find the shortest path angle around the soccer field
+      const diff = Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1));
+
+      // Build intermediate nodes along the concourse ring to form a beautiful curve
+      const points: { x: number; y: number }[] = [];
+      
+      // Point 0: Start location
+      points.push({ x: x1, y: y1 });
+
+      // Point 1: Concourse entry anchor
+      points.push({ x: cx + R * Math.cos(a1), y: cy + R * Math.sin(a1) });
+
+      // Points 2, 3, 4: Smooth arc interpolation around soccer field
+      const segmentsCount = 5;
+      for (let i = 1; i < segmentsCount; i++) {
+        const ratio = i / segmentsCount;
+        const currentAngle = a1 + diff * ratio;
+        points.push({ x: cx + R * Math.cos(currentAngle), y: cy + R * Math.sin(currentAngle) });
+      }
+
+      // Point 5: Concourse exit anchor
+      points.push({ x: cx + R * Math.cos(a2), y: cy + R * Math.sin(a2) });
+
+      // Point 6: Target destination location
+      points.push({ x: x2, y: y2 });
+
+      setRoutePoints(points);
+
+      // Construct line segment objects for the path renderer
+      const lines = [];
+      for (let i = 0; i < points.length - 1; i++) {
+        lines.push({
+          x1: points[i].x,
+          y1: points[i].y,
+          x2: points[i + 1].x,
+          y2: points[i + 1].y
+        });
+      }
 
       setRouteLine(lines);
       setShowNavigationResult(true);
     }
   };
+
+  // Run auto routing calculation whenever endpoints change
+  React.useEffect(() => {
+    if (navigationStart && navigationEnd) {
+      handleCalculateNavigation();
+    } else {
+      setRouteLine([]);
+      setRoutePoints([]);
+      setShowNavigationResult(false);
+      setSimulatedProgress(null);
+    }
+  }, [navigationStart, navigationEnd]);
+
+  // Triggers walking simulation loop
+  const handleSimulateWalk = () => {
+    if (routePoints.length === 0) return;
+    setIsSimulating(true);
+    setSimulatedProgress(0);
+
+    if (simulationTimerRef.current) {
+      clearInterval(simulationTimerRef.current);
+    }
+
+    let progress = 0;
+    simulationTimerRef.current = setInterval(() => {
+      progress += 2.5; // step increment
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(simulationTimerRef.current);
+        setIsSimulating(false);
+      }
+      setSimulatedProgress(progress);
+    }, 70); // smooth animation interval
+  };
+
+  // Calculated route statistics (meters & estimated minutes)
+  const routeStats = React.useMemo(() => {
+    if (!navigationStart || !navigationEnd || routePoints.length === 0) return null;
+    const startFac = stadium.facilities.find(f => f.id === navigationStart);
+    const endFac = stadium.facilities.find(f => f.id === navigationEnd);
+    if (!startFac || !endFac) return null;
+
+    const cx = 50;
+    const cy = 50;
+    const R = 37;
+
+    const x1 = startFac.longitude;
+    const y1 = startFac.latitude;
+    const x2 = endFac.longitude;
+    const y2 = endFac.latitude;
+
+    const r1 = Math.sqrt((x1 - cx) ** 2 + (y1 - cy) ** 2);
+    const r2 = Math.sqrt((x2 - cx) ** 2 + (y2 - cy) ** 2);
+
+    const a1 = Math.atan2(y1 - cy, x1 - cx);
+    const a2 = Math.atan2(y2 - cy, x2 - cx);
+    const diff = Math.atan2(Math.sin(a2 - a1), Math.cos(a2 - a1));
+
+    // Calculate segments components
+    const dStart = Math.abs(r1 - R);
+    const dArc = R * Math.abs(diff);
+    const dEnd = Math.abs(r2 - R);
+
+    const totalUnits = dStart + dArc + dEnd;
+    const totalMeters = Math.round(totalUnits * 2.8); // 1 coordinate unit matches ~2.8 meters
+
+    // Slowdowns due to crowds and live stadium congestion
+    let speedMultiplier = 1.0;
+    if (stadium.crowdDensity === CrowdDensity.MODERATE) speedMultiplier = 0.8;
+    else if (stadium.crowdDensity === CrowdDensity.HIGH) speedMultiplier = 0.55;
+    else if (stadium.crowdDensity === CrowdDensity.EXTREME) speedMultiplier = 0.35;
+
+    const baseWalkSpeedMetersPerMin = 80;
+    const finalSpeed = baseWalkSpeedMetersPerMin * speedMultiplier;
+    const totalMinutes = totalMeters / finalSpeed;
+
+    return {
+      meters: totalMeters,
+      minutes: parseFloat(totalMinutes.toFixed(1)),
+      speedMultiplier,
+      directionClockwise: diff > 0,
+      arcDistanceMeters: Math.round(dArc * 2.8)
+    };
+  }, [navigationStart, navigationEnd, routePoints, stadium.crowdDensity]);
+
+  // Dynamic landmark selection (list adjacent facilities along route)
+  const landmarksAlongRoute = React.useMemo(() => {
+    if (!navigationStart || !navigationEnd || routePoints.length === 0) return [];
+    const startFac = stadium.facilities.find(f => f.id === navigationStart);
+    const endFac = stadium.facilities.find(f => f.id === navigationEnd);
+    if (!startFac || !endFac) return [];
+
+    const cx = 50;
+    const cy = 50;
+    const a1 = Math.atan2(startFac.latitude - cy, startFac.longitude - cx);
+    const a2 = Math.atan2(endFac.latitude - cy, endFac.longitude - cx);
+    
+    const minA = Math.min(a1, a2);
+    const maxA = Math.max(a1, a2);
+    const angleDiff = maxA - minA;
+
+    return stadium.facilities.filter(f => {
+      if (f.id === navigationStart || f.id === navigationEnd) return false;
+      const fa = Math.atan2(f.latitude - cy, f.longitude - cx);
+      
+      // Determine if within range
+      if (angleDiff < Math.PI) {
+        return fa >= minA && fa <= maxA;
+      } else {
+        return fa <= minA || fa >= maxA;
+      }
+    }).slice(0, 2); // Show up to 2 landmarks
+  }, [navigationStart, navigationEnd, routePoints, stadium.facilities]);
+
+  // Checks for security warnings, closures or extreme crowd alerts
+  const routeWarnings = React.useMemo(() => {
+    const warnings: string[] = [];
+    const startFac = stadium.facilities.find(f => f.id === navigationStart);
+    const endFac = stadium.facilities.find(f => f.id === navigationEnd);
+
+    if (startFac) {
+      if (startFac.status === FacilityStatus.CLOSED || startFac.status === FacilityStatus.EMERGENCY) {
+        warnings.push(`Warning: Starting location "${startFac.name}" is currently ${startFac.status}. Seek immediate staff help.`);
+      } else if (startFac.status === FacilityStatus.CONGESTED) {
+        warnings.push(`Congestion: Starting point "${startFac.name}" is heavily congested. Expected delays.`);
+      }
+    }
+
+    if (endFac) {
+      if (endFac.status === FacilityStatus.CLOSED || endFac.status === FacilityStatus.EMERGENCY) {
+        warnings.push(`Caution: Selected destination "${endFac.name}" is currently ${endFac.status}. Choose alternative facility.`);
+      } else if (endFac.status === FacilityStatus.CONGESTED) {
+        warnings.push(`Advisory: Destination "${endFac.name}" has critical queues (~${endFac.waitTimeMinutes}m wait).`);
+      }
+    }
+
+    // Check landmarks
+    landmarksAlongRoute.forEach(lm => {
+      if (lm.status === FacilityStatus.EMERGENCY || lm.status === FacilityStatus.CLOSED) {
+        warnings.push(`Reroute Advice: Landmark "${lm.name}" along route is ${lm.status}. Avoid concourse sector near this asset.`);
+      }
+    });
+
+    if (stadium.crowdDensity === CrowdDensity.EXTREME) {
+      warnings.push(`Alert: Stadium-wide crowd density is EXTREME. Slow, paced shuffles enforced on all concourses.`);
+    }
+
+    return warnings;
+  }, [navigationStart, navigationEnd, landmarksAlongRoute, stadium.crowdDensity]);
+
+  // Render spectator position during simulated progress
+  const simulatedCoordinates = React.useMemo(() => {
+    if (simulatedProgress === null || routePoints.length === 0) return null;
+    
+    // Total steps/segments is 6
+    const numSegments = routePoints.length - 1;
+    const globalFraction = simulatedProgress / 100;
+    const scaledProgress = globalFraction * numSegments;
+    const segmentIndex = Math.min(Math.floor(scaledProgress), numSegments - 1);
+    const segmentFraction = scaledProgress - segmentIndex;
+
+    const startPt = routePoints[segmentIndex];
+    const endPt = routePoints[segmentIndex + 1];
+
+    return {
+      x: startPt.x + (endPt.x - startPt.x) * segmentFraction,
+      y: startPt.y + (endPt.y - startPt.y) * segmentFraction
+    };
+  }, [simulatedProgress, routePoints]);
 
   const handleSaveFacilityEdits = () => {
     if (selectedFacility && onUpdateFacility) {
@@ -166,7 +411,18 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
     }
   };
 
+  // Group facilities elegantly for selecting starting/destination points
+  const groupedFacilities = React.useMemo(() => {
+    const groups: { [key in FacilityCategory]?: Facility[] } = {};
+    stadium.facilities.forEach(f => {
+      if (!groups[f.category]) groups[f.category] = [];
+      groups[f.category]!.push(f);
+    });
+    return groups;
+  }, [stadium.facilities]);
+
   return (
+
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="map-module-layout">
       {/* Search & Left Control Column */}
       <div className="space-y-6 lg:col-span-1" id="map-controls-panel">
@@ -296,43 +552,52 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
         </div>
  
         {/* Live Navigation Assistant Drawer */}
-        <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl">
-          <h4 className="font-semibold text-white flex items-center gap-2 mb-3 text-sm">
+        <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl animate-pulse-gold">
+          <h4 className="font-semibold text-white flex items-center gap-2 mb-1.5 text-sm">
             <Navigation className="w-4 h-4 text-[#C5A059]" />
-            Simulate Route & Transit Time
+            Live Navigation & Crowd Router
           </h4>
-          <div className="space-y-3">
+          <p className="text-[10.5px] text-white/50 mb-4 leading-relaxed font-normal">
+            Select a custom starting and ending location to compute real-time concourse routes avoiding crowd overflows.
+          </p>
+          <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Starting Point</label>
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Starting Point</label>
               <select
                 value={navigationStart}
                 onChange={(e) => setNavigationStart(e.target.value)}
                 className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059]"
               >
-                <option value="">-- Choose Gate / Entry --</option>
-                {stadium.facilities
-                  .filter(f => f.category === FacilityCategory.ENTRY_GATE)
-                  .map(f => (
-                    <option key={f.id} value={f.id}>{f.name} (Wait: {f.waitTimeMinutes}m)</option>
-                  ))
-                }
+                <option value="">-- Choose Any Location --</option>
+                {Object.entries(groupedFacilities).map(([category, list]) => (
+                  <optgroup key={category} label={category.replace(/_/g, " ")} className="bg-[#14161E] text-[#C5A059]">
+                    {(list as Facility[]).map(f => (
+                      <option key={f.id} value={f.id} className="text-white">
+                        {f.name} {f.waitTimeMinutes > 0 ? `(Wait: ${f.waitTimeMinutes}m)` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
  
             <div>
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">Destination Facility</label>
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Destination Facility</label>
               <select
                 value={navigationEnd}
                 onChange={(e) => setNavigationEnd(e.target.value)}
                 className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059]"
               >
-                <option value="">-- Choose Concession, Seat or Restroom --</option>
-                {stadium.facilities
-                  .filter(f => f.category !== FacilityCategory.ENTRY_GATE)
-                  .map(f => (
-                    <option key={f.id} value={f.id}>{f.name} ({f.category})</option>
-                  ))
-                }
+                <option value="">-- Choose Any Location --</option>
+                {Object.entries(groupedFacilities).map(([category, list]) => (
+                  <optgroup key={category} label={category.replace(/_/g, " ")} className="bg-[#14161E] text-[#C5A059]">
+                    {(list as Facility[]).map(f => (
+                      <option key={f.id} value={f.id} className="text-white">
+                        {f.name} {f.waitTimeMinutes > 0 ? `(Wait: ${f.waitTimeMinutes}m)` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
  
@@ -342,38 +607,117 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
               className="w-full flex items-center justify-center gap-2 py-2 bg-[#C5A059] hover:bg-[#D8B775] disabled:bg-white/5 disabled:text-white/20 text-black rounded-lg font-semibold text-xs transition-all cursor-pointer shadow-lg shadow-[#C5A059]/10"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Calculate Smart Route
+              Force Recalculate Route
             </button>
  
-            {showNavigationResult && (
-              <div className="mt-4 p-3.5 bg-black border border-white/10 rounded-lg space-y-2.5 animate-in fade-in" id="nav-calc-output">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <span className="text-[10px] font-bold text-white/40 uppercase">Estimated Transit</span>
-                  <div className="flex gap-2">
-                    <span className="text-xs font-mono font-bold text-[#C5A059]">180 meters</span>
-                    <span className="text-xs font-mono font-bold text-[#C5A059]">~ 3.5 mins walk</span>
+            {showNavigationResult && routeStats && (
+              <div className="mt-4 p-4 bg-black border border-white/10 rounded-lg space-y-3.5 animate-in fade-in animate-pulse-gold" id="nav-calc-output">
+                
+                {/* Metrics Header */}
+                <div className="flex flex-col gap-1.5 border-b border-white/5 pb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Estimated Transit</span>
+                    <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-bold uppercase font-mono">
+                      {stadium.crowdDensity} CROWDS
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-baseline mt-1">
+                    <div className="flex gap-1 items-baseline">
+                      <span className="text-xl font-black font-mono text-[#C5A059]">{routeStats.meters}</span>
+                      <span className="text-[10px] font-bold text-white/50">meters</span>
+                    </div>
+                    <div className="flex gap-1 items-baseline">
+                      <span className="text-xl font-black font-mono text-[#C5A059]">~{routeStats.minutes}</span>
+                      <span className="text-[10px] font-bold text-white/50 font-sans">mins walk</span>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2 text-[11px] text-white/80">
+
+                {/* Simulation button */}
+                <button
+                  onClick={handleSimulateWalk}
+                  disabled={isSimulating}
+                  className="w-full flex items-center justify-center gap-2 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 disabled:bg-white/5 disabled:text-white/20 disabled:border-transparent rounded-lg font-bold text-xs transition-all cursor-pointer"
+                >
+                  <Footprints className="w-4 h-4 animate-bounce" />
+                  {isSimulating ? `Walking... (${Math.round(simulatedProgress!)}%)` : "Simulate Walk on Map"}
+                </button>
+
+                {/* Safety warnings list */}
+                {routeWarnings.length > 0 && (
+                  <div className="space-y-1.5 bg-red-500/5 border border-red-500/15 p-2.5 rounded-lg">
+                    {routeWarnings.map((warn, widx) => (
+                      <div key={widx} className="flex gap-2 items-start text-[10px] text-red-400 font-medium">
+                        <AlertOctagon className="w-3.5 h-3.5 shrink-0 text-red-500 mt-0.5" />
+                        <span>{warn}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Step-by-step custom routing */}
+                <div className="space-y-3 text-[11px] text-white/80 pt-1 leading-relaxed">
                   <div className="flex gap-2 items-start">
                     <span className="text-[#C5A059] font-bold font-mono">1.</span>
-                    <span>Proceed past ticket scanner and clear bags check at starting gate.</span>
+                    <span>
+                      Depart from <strong>{stadium.facilities.find(f => f.id === navigationStart)?.name}</strong>.
+                      {stadium.facilities.find(f => f.id === navigationStart)?.category === FacilityCategory.ENTRY_GATE && (
+                        ` Complete initial security screening & tickets check.`
+                      )}
+                    </span>
                   </div>
+
                   <div className="flex gap-2 items-start">
                     <span className="text-[#C5A059] font-bold font-mono">2.</span>
-                    <span>Follow gold overhead signage down **Outer Concourse Corridor A** for 90 meters.</span>
+                    <span>
+                      Merge onto outer concourse ring. Walk <strong>{routeStats.arcDistanceMeters} meters</strong>{" "}
+                      <strong>{routeStats.directionClockwise ? "clockwise" : "counter-clockwise"}</strong>.
+                    </span>
                   </div>
+
+                  {landmarksAlongRoute.length > 0 && (
+                    <div className="flex gap-2 items-start pl-4 border-l border-white/5">
+                      <span className="text-white/40 font-mono">↳</span>
+                      <span className="text-white/50 text-[10px]">
+                        Pass by landmarks:{" "}
+                        {landmarksAlongRoute.map((lm, idx) => (
+                          <span key={lm.id} className="text-white/70">
+                            {idx > 0 ? ", " : ""}<strong>{lm.name}</strong> ({lm.waitTimeMinutes}m wait)
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+
+                  {stadium.crowdDensity !== CrowdDensity.LOW && (
+                    <div className="flex gap-2 items-start pl-4 border-l border-white/5">
+                      <span className="text-amber-400 font-mono font-bold">⚠️</span>
+                      <span className="text-amber-400/80 text-[10.5px]">
+                        Crowd density speed cap: Slowed by{" "}
+                        <strong>{Math.round((1 - routeStats.speedMultiplier) * 100)}%</strong>.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 items-start">
                     <span className="text-[#C5A059] font-bold font-mono">3.</span>
-                    <span>Turn left next to the central spectator directory and locate your destination directly ahead.</span>
+                    <span>
+                      Arrive at destination <strong>{stadium.facilities.find(f => f.id === navigationEnd)?.name}</strong>.
+                      {stadium.facilities.find(f => f.id === navigationEnd)?.waitTimeMinutes ? (
+                        ` Current wait is approx ${stadium.facilities.find(f => f.id === navigationEnd)?.waitTimeMinutes} minutes.`
+                      ) : (
+                        " Clear path ahead!"
+                      )}
+                    </span>
                   </div>
                 </div>
+
               </div>
             )}
           </div>
         </div>
       </div>
-
+ 
       {/* Main Map Visualization Column */}
       <div className="lg:col-span-2 space-y-6" id="map-view-canvas">
         <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl flex flex-col min-h-[450px]">
@@ -389,7 +733,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
             <div className="flex items-center gap-2">
               <button 
                 onClick={() => { setZoomLevel(1); setMapOffset({ x: 0, y: 0 }); }}
-                className="p-1.5 bg-white/5 border border-white/5 text-white/40 rounded-lg hover:text-white transition-colors"
+                className="p-1.5 bg-white/5 border border-white/5 text-white/40 rounded-lg hover:text-white transition-colors cursor-pointer"
                 title="Reset View"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -400,7 +744,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
               </div>
             </div>
           </div>
- 
+  
           {/* Interactive GIS SVG Canvas */}
           <div className="relative flex-1 bg-black border border-white/10 rounded-xl overflow-hidden flex items-center justify-center p-4 min-h-[350px]" id="stadium-gis-canvas">
             {/* Background vector stadium layout */}
@@ -417,7 +761,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
               <ellipse cx="50" cy="50" rx="34" ry="34" fill="none" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="1.5" />
               {/* Seating bowl rim ring */}
               <ellipse cx="50" cy="50" rx="25" ry="25" fill="#050608" stroke="rgba(255, 255, 255, 0.08)" strokeWidth="1" />
- 
+  
               {/* Pitch grid layout (World Cup grass template) */}
               <rect x="36" y="36" width="28" height="28" rx="2" fill="#041F12" stroke="#059669" strokeWidth="0.5" />
               {/* Pitch lines */}
@@ -425,7 +769,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
               <circle cx="50" cy="50" r="5" fill="none" stroke="#059669" strokeWidth="0.5" />
               <rect x="36" y="44" width="4" height="12" fill="none" stroke="#059669" strokeWidth="0.5" />
               <rect x="60" y="44" width="4" height="12" fill="none" stroke="#059669" strokeWidth="0.5" />
- 
+  
               {/* Congestion overlay zones */}
               {stadium.crowdDensity === CrowdDensity.EXTREME && (
                 <ellipse cx="50" cy="50" rx="35" ry="35" fill="rgba(239, 68, 68, 0.04)" stroke="rgba(239, 68, 68, 0.3)" strokeWidth="1" />
@@ -433,7 +777,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
               {stadium.crowdDensity === CrowdDensity.HIGH && (
                 <ellipse cx="50" cy="50" rx="35" ry="35" fill="rgba(197, 160, 89, 0.03)" stroke="rgba(197, 160, 89, 0.2)" strokeWidth="1" />
               )}
- 
+  
               {/* Dynamic route pathing highlight lines */}
               {routeLine.map((line, idx) => (
                 <line
@@ -443,12 +787,35 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   x2={line.x2}
                   y2={line.y2}
                   stroke="#C5A059"
-                  strokeWidth="1.5"
+                  strokeWidth="1.3"
                   strokeDasharray="4,2"
                   className="animate-route-flow"
                 />
               ))}
- 
+
+              {/* Simulated Walking Spectator Marker */}
+              {simulatedCoordinates && (
+                <g>
+                  <circle 
+                    cx={simulatedCoordinates.x} 
+                    cy={simulatedCoordinates.y} 
+                    r="4" 
+                    fill="none" 
+                    stroke="#D8B775" 
+                    strokeWidth="0.7" 
+                    className="animate-ping" 
+                  />
+                  <circle 
+                    cx={simulatedCoordinates.x} 
+                    cy={simulatedCoordinates.y} 
+                    r="2.2" 
+                    fill="#D8B775" 
+                    stroke="#ffffff" 
+                    strokeWidth="0.6" 
+                  />
+                </g>
+              )}
+  
               {/* Plot Facilities */}
               {stadium.facilities.map((fac) => {
                 const isSelected = selectedFacility?.id === fac.id;
@@ -462,8 +829,17 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   <g 
                      key={fac.id}
                      onClick={() => setSelectedFacility(fac)}
-                     className="cursor-pointer group"
+                     onKeyDown={(e) => {
+                       if (e.key === "Enter" || e.key === " ") {
+                         e.preventDefault();
+                         setSelectedFacility(fac);
+                       }
+                     }}
+                     className="cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
                      id={`svg-asset-${fac.id}`}
+                     tabIndex={0}
+                     role="button"
+                     aria-label={`${fac.name} - Status: ${fac.status}, Wait time: ${fac.waitTimeMinutes} minutes`}
                   >
                     {/* Ring aura if selected */}
                     {isSelected && (
@@ -473,7 +849,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                     <circle 
                       cx={fac.longitude} 
                       cy={fac.latitude} 
-                      r={isSelected ? "3" : "2"} 
+                      r={isSelected ? "3.2" : "2.2"} 
                       fill={statusFill} 
                       stroke="#08090C" 
                       strokeWidth="0.5"
@@ -483,9 +859,9 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                     {fac.category === FacilityCategory.ENTRY_GATE && (
                       <text 
                         x={fac.longitude} 
-                        y={fac.latitude - 3} 
+                        y={fac.latitude - 3.2} 
                         fill="#94a3b8" 
-                        fontSize="2.2" 
+                        fontSize="2.4" 
                         textAnchor="middle" 
                         fontWeight="bold"
                         className="font-mono select-none"
@@ -497,7 +873,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                 );
               })}
             </svg>
- 
+  
             {/* Quick legend overlay */}
             <div className="absolute bottom-3 left-3 bg-[#111216]/95 border border-white/10 rounded-lg p-2 flex flex-col gap-1 text-[9px] text-white/50 font-semibold shadow-lg" id="map-legend">
               <div className="flex items-center gap-1.5">
@@ -513,24 +889,24 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                 <span className="w-2 h-2 rounded-full bg-red-500" /> Closed/Emergency
               </div>
             </div>
- 
+  
             {/* Map zoom floating buttons */}
             <div className="absolute right-3 top-3 flex flex-col gap-1">
               <button 
                 onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 2.5))}
-                className="w-7 h-7 bg-[#14161E] border border-white/10 hover:bg-[#1E212B] text-white/80 rounded font-bold text-sm cursor-pointer transition-all"
+                className="w-7 h-7 bg-[#14161E] border border-white/10 hover:bg-[#1E212B] text-white/80 rounded font-bold text-sm cursor-pointer transition-all flex items-center justify-center"
               >
                 +
               </button>
               <button 
                 onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 1))}
-                className="w-7 h-7 bg-[#14161E] border border-white/10 hover:bg-[#1E212B] text-white/80 rounded font-bold text-sm cursor-pointer transition-all"
+                className="w-7 h-7 bg-[#14161E] border border-white/10 hover:bg-[#1E212B] text-white/80 rounded font-bold text-sm cursor-pointer transition-all flex items-center justify-center"
               >
                 -
               </button>
             </div>
           </div>
- 
+  
           {/* Active Facility Information Overlay */}
           {selectedFacility ? (
             <div className="mt-4 p-4 bg-black border border-white/10 rounded-lg animate-in fade-in slide-in-from-bottom-2" id="selected-facility-details">
@@ -552,6 +928,40 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   <p className="text-[10px] text-white/40 font-mono">
                     Hours: {selectedFacility.openingHours} | Capacity Buffer: {selectedFacility.capacity.toLocaleString()} spectators
                   </p>
+
+                  {/* Quick starting/destination selection hooks */}
+                  <div className="flex flex-wrap gap-2 pt-2.5">
+                    <button
+                      onClick={() => {
+                        setNavigationStart(selectedFacility.id);
+                        if (navigationEnd === selectedFacility.id) {
+                          setNavigationEnd("");
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                        navigationStart === selectedFacility.id
+                          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                          : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {navigationStart === selectedFacility.id ? "✓ Active Starting Point" : "Set as Start"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNavigationEnd(selectedFacility.id);
+                        if (navigationStart === selectedFacility.id) {
+                          setNavigationStart("");
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer border ${
+                        navigationEnd === selectedFacility.id
+                          ? "bg-[#C5A059]/15 border-[#C5A059]/30 text-[#C5A059]"
+                          : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {navigationEnd === selectedFacility.id ? "✓ Active Destination" : "Set as Destination"}
+                    </button>
+                  </div>
                   
                   {/* Food details */}
                   {selectedFacility.foodDetails && (
@@ -564,7 +974,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                     </div>
                   )}
                 </div>
- 
+  
                 {/* Queue details & actions */}
                 <div className="flex flex-col items-stretch sm:items-end gap-3 shrink-0 w-full sm:w-auto">
                   <div className="bg-[#14161E]/80 border border-white/10 rounded-xl p-3 text-right">
@@ -572,7 +982,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                     <span className="block font-mono text-xl font-black text-[#C5A059] mt-0.5">{selectedFacility.waitTimeMinutes} mins</span>
                     <span className="block text-[10px] text-white/50 font-medium mt-0.5">{getQueueLabel(selectedFacility.queueLength)}</span>
                   </div>
- 
+  
                   {/* Operational Management controls for Staff and Organizers */}
                   {(currentUserRole === UserRole.STADIUM_ORGANIZER || 
                     currentUserRole === UserRole.STADIUM_STAFF || 
@@ -597,7 +1007,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                                 <option value={FacilityStatus.EMERGENCY}>EMERGENCY</option>
                               </select>
                             </div>
- 
+  
                             <div>
                               <label className="block text-[9px] text-white/40 mb-0.5">Queue Size</label>
                               <select
@@ -613,7 +1023,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                               </select>
                             </div>
                           </div>
- 
+  
                           <div>
                             <label className="block text-[9px] text-white/40 mb-0.5">Wait Time (Minutes)</label>
                             <input
@@ -625,7 +1035,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                               className="w-full px-2 py-1 bg-black border border-white/10 rounded text-[11px] text-white/80 focus:outline-none focus:border-[#C5A059]"
                             />
                           </div>
- 
+  
                           <div className="flex gap-2 justify-end pt-1">
                             <button
                               onClick={() => setIsEditing(false)}

@@ -31,6 +31,19 @@ const PORT = 3000;
 
 app.use(express.json());
 
+// Robust XSS input sanitization and length truncation security helper
+function sanitizeString(str: any, maxLength: number = 255): string {
+  if (typeof str !== "string") return "";
+  let clean = str.trim();
+  // Strip standard HTML tags to block Stored/Reflected XSS payloads
+  clean = clean.replace(/<[^>]*>/g, "");
+  // Enforce security boundaries on length
+  if (clean.length > maxLength) {
+    clean = clean.substring(0, maxLength);
+  }
+  return clean;
+}
+
 // Initialize server-side Gemini API Client with recommended telemetry headers
 const geminiApiKey = process.env.GEMINI_API_KEY || "";
 let ai: GoogleGenAI | null = null;
@@ -558,9 +571,29 @@ app.get("/api/stadiums", (req, res) => {
 
 // 2. Create dynamic stadium
 app.post("/api/stadiums", (req, res) => {
-  const { name, country, city, address, latitude, longitude, capacity, eventName } = req.body;
+  let { name, country, city, address, latitude, longitude, capacity, eventName } = req.body;
   if (!name || !country || !city || !capacity) {
     res.status(400).json({ error: "Missing required fields: name, country, city, capacity" });
+    return;
+  }
+
+  // Security input sanitization & maximum length enforcement
+  name = sanitizeString(name, 80);
+  country = sanitizeString(country, 50);
+  city = sanitizeString(city, 50);
+  address = sanitizeString(address, 200);
+  eventName = sanitizeString(eventName, 100);
+
+  const numCapacity = Number(capacity);
+  if (isNaN(numCapacity) || numCapacity < 1000 || numCapacity > 200000) {
+    res.status(400).json({ error: "Sane capacity bounds: must be a number between 1,000 and 200,000 seats." });
+    return;
+  }
+
+  const numLat = Number(latitude);
+  const numLng = Number(longitude);
+  if (isNaN(numLat) || numLat < -90 || numLat > 90 || isNaN(numLng) || numLng < -180 || numLng > 180) {
+    res.status(400).json({ error: "Latitude or Longitude is out of standard physical bounds." });
     return;
   }
 
@@ -570,9 +603,9 @@ app.post("/api/stadiums", (req, res) => {
     country,
     city,
     address: address || "",
-    latitude: Number(latitude) || 0,
-    longitude: Number(longitude) || 0,
-    capacity: Number(capacity),
+    latitude: numLat || 0,
+    longitude: numLng || 0,
+    capacity: numCapacity,
     eventName: eventName || "FIFA World Cup 2026 Matchday",
     crowdDensity: CrowdDensity.LOW,
     parkingOccupancy: 0,
@@ -628,11 +661,18 @@ app.put("/api/stadiums/:id", (req, res) => {
   const { crowdDensity, parkingOccupancy, weatherAlert, trafficStatus, emergencyAlert, eventName } = req.body;
 
   if (crowdDensity !== undefined) stadium.crowdDensity = crowdDensity;
-  if (parkingOccupancy !== undefined) stadium.parkingOccupancy = Number(parkingOccupancy);
-  if (weatherAlert !== undefined) stadium.weatherAlert = weatherAlert;
-  if (trafficStatus !== undefined) stadium.trafficStatus = trafficStatus;
-  if (emergencyAlert !== undefined) stadium.emergencyAlert = emergencyAlert;
-  if (eventName !== undefined) stadium.eventName = eventName;
+  if (parkingOccupancy !== undefined) {
+    const numPark = Number(parkingOccupancy);
+    if (isNaN(numPark) || numPark < 0 || numPark > 100) {
+      res.status(400).json({ error: "Parking occupancy must be between 0% and 100%." });
+      return;
+    }
+    stadium.parkingOccupancy = numPark;
+  }
+  if (weatherAlert !== undefined) stadium.weatherAlert = sanitizeString(weatherAlert, 150);
+  if (trafficStatus !== undefined) stadium.trafficStatus = sanitizeString(trafficStatus, 100);
+  if (emergencyAlert !== undefined) stadium.emergencyAlert = sanitizeString(emergencyAlert, 150);
+  if (eventName !== undefined) stadium.eventName = sanitizeString(eventName, 100);
 
   res.json(stadium);
 });
@@ -704,11 +744,18 @@ app.post("/api/stadiums/:id/incidents", (req, res) => {
     return;
   }
 
-  const { title, category, description, facilityId, section, severity, reporterName } = req.body;
+  let { title, category, description, facilityId, section, severity, reporterName } = req.body;
   if (!title || !category || !description || !severity) {
-    res.status(400).json({ error: "Missing incident details" });
+    res.status(400).json({ error: "Missing required incident details: title, category, description, severity" });
     return;
   }
+
+  // Sanitize fields to protect against XSS injection
+  title = sanitizeString(title, 100);
+  category = sanitizeString(category, 50);
+  description = sanitizeString(description, 1000);
+  section = sanitizeString(section, 50);
+  reporterName = sanitizeString(reporterName, 100);
 
   const newIncident: Incident = {
     id: `inc-${Date.now()}`,
@@ -784,7 +831,15 @@ app.post("/api/stadiums/:id/tasks", (req, res) => {
     return;
   }
 
-  const { title, description, assignedRole, facilityId } = req.body;
+  let { title, description, assignedRole, facilityId } = req.body;
+  if (!title || !description) {
+    res.status(400).json({ error: "Missing required fields: title, description" });
+    return;
+  }
+
+  title = sanitizeString(title, 100);
+  description = sanitizeString(description, 1000);
+
   const newTask: StaffTask = {
     id: `task-${Date.now()}`,
     title,
