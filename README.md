@@ -1,6 +1,6 @@
-# StadiumGPT OS • FIFA World Cup 2026 Digital Venue Platform
+# StadiumGPT OS • FIFA World Cup Digital Venue Platform
 
-StadiumGPT OS is an advanced, high-performance, full-stack digital twin and operational venue management command center tailored for the FIFA World Cup 2026 matches. It combines interactive spatial mapping (GIS), predictive crowd simulation, an intelligent AI-powered decision support assistant, and an automated system compliance suite.
+StadiumGPT OS is an advanced, high-performance, full-stack digital twin and operational venue management command center tailored for any FIFA World Cup matches. It combines interactive spatial mapping (GIS), predictive crowd simulation, an intelligent AI-powered decision support assistant, and an automated system compliance suite.
 
 ---
 
@@ -89,4 +89,4 @@ npm run start
 
 ---
 
-*StadiumGPT OS • Authorized Operator Console • Secure Session • FIFA World Cup 2026 Digital Venue Platform*
+*StadiumGPT OS • Authorized Operator Console • Secure Session • FIFA World Cup Digital Venue Platform*

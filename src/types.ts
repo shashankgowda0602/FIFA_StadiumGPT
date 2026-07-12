@@ -136,7 +136,7 @@ export interface Stadium {
   latitude: number;
   longitude: number;
   capacity: number;
-  eventName: string; // e.g., "FIFA World Cup 2026 - Matchday 1"
+  eventName: string; // e.g., "FIFA World Cup - Matchday 1"
   matchSchedule: MatchSchedule[];
   facilities: Facility[];
   incidents: Incident[];

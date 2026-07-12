@@ -34,7 +34,7 @@ export default function StadiumConfigurator({ onAddStadium, currentUserRole }: S
   const [latitude, setLatitude] = React.useState("");
   const [longitude, setLongitude] = React.useState("");
   const [capacity, setCapacity] = React.useState("");
-  const [eventName, setEventName] = React.useState("FIFA World Cup 2026 - Matchday");
+  const [eventName, setEventName] = React.useState("FIFA World Cup Matchday");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +64,7 @@ export default function StadiumConfigurator({ onAddStadium, currentUserRole }: S
         setLatitude("");
         setLongitude("");
         setCapacity("");
-        setEventName("FIFA World Cup 2026 - Matchday");
+        setEventName("FIFA World Cup Matchday");
       }, 1500);
 
     } catch (err) {
@@ -109,7 +109,7 @@ export default function StadiumConfigurator({ onAddStadium, currentUserRole }: S
                   <Settings className="w-4.5 h-4.5" />
                 </span>
                 <div>
-                  <h3 className="font-semibold text-white text-sm">Configure FIFA 2026 Smart Venue</h3>
+                  <h3 className="font-semibold text-white text-sm">Configure FIFA Smart Venue</h3>
                   <p className="text-[10px] text-white/50">Spawn dynamic stadiums with default security, medical & restroom facilities</p>
                 </div>
               </div>
@@ -149,7 +149,7 @@ export default function StadiumConfigurator({ onAddStadium, currentUserRole }: S
                     <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wide mb-1">Event / Match Day Name</label>
                     <input
                       type="text"
-                      placeholder="e.g. FIFA World Cup 2026 - Group Stage"
+                      placeholder="e.g. FIFA World Cup - Group Stage"
                       value={eventName}
                       onChange={(e) => setEventName(e.target.value)}
                       className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white text-xs focus:outline-none focus:border-[#C5A059]"

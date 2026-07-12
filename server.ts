@@ -61,6 +61,8 @@ if (geminiApiKey && geminiApiKey !== "MY_GEMINI_API_KEY") {
   console.warn("Warning: GEMINI_API_KEY is not configured or set to placeholder. Gemini capabilities will fall back to smart local rule-based assistance.");
 }
 
+const currentYear = new Date().getFullYear();
+
 // Pre-seeded high-fidelity stadium databases
 let stadiums: Stadium[] = [
   {
@@ -72,7 +74,7 @@ let stadiums: Stadium[] = [
     latitude: 40.8135,
     longitude: -74.0744,
     capacity: 82500,
-    eventName: "FIFA World Cup 2026 - Matchday 11",
+    eventName: "FIFA World Cup - Matchday 11",
     crowdDensity: CrowdDensity.MODERATE,
     parkingOccupancy: 65,
     weatherAlert: "Heat Advisory - Hydration recommended",
@@ -85,7 +87,7 @@ let stadiums: Stadium[] = [
         stage: "Group Stage",
         teamA: "USA",
         teamB: "Italy",
-        date: "2026-06-15",
+        date: `${currentYear}-06-15`,
         time: "19:00",
         status: "LIVE",
         score: "1-1",
@@ -97,7 +99,7 @@ let stadiums: Stadium[] = [
         stage: "Group Stage",
         teamA: "Portugal",
         teamB: "Morocco",
-        date: "2026-06-22",
+        date: `${currentYear}-06-22`,
         time: "15:00",
         status: "SCHEDULED"
       },
@@ -107,7 +109,7 @@ let stadiums: Stadium[] = [
         stage: "Final Match",
         teamA: "Winner SF1",
         teamB: "Winner SF2",
-        date: "2026-07-19",
+        date: `${currentYear}-07-19`,
         time: "20:00",
         status: "SCHEDULED"
       }
@@ -317,7 +319,7 @@ let stadiums: Stadium[] = [
         severity: IncidentSeverity.MINOR,
         status: IncidentStatus.ACTIVE,
         reporterName: "Vol. Jacob Miller",
-        reportedAt: "2026-07-12T11:15:00Z"
+        reportedAt: `${currentYear}-07-12T11:15:00Z`
       },
       {
         id: "inc-nj-102",
@@ -329,7 +331,7 @@ let stadiums: Stadium[] = [
         severity: IncidentSeverity.MAJOR,
         status: IncidentStatus.RESPONDING,
         reporterName: "Staff Sarah Jenkins",
-        reportedAt: "2026-07-12T11:20:00Z",
+        reportedAt: `${currentYear}-07-12T11:20:00Z`,
         assignedStaffId: "nj-medic-team-1"
       }
     ],
@@ -342,7 +344,7 @@ let stadiums: Stadium[] = [
         stadiumId: "stadium-metlife",
         facilityId: "nj-restroom-south",
         status: "IN_PROGRESS",
-        createdAt: "2026-07-12T11:16:00Z"
+        createdAt: `${currentYear}-07-12T11:16:00Z`
       },
       {
         id: "task-nj-202",
@@ -352,7 +354,7 @@ let stadiums: Stadium[] = [
         stadiumId: "stadium-metlife",
         facilityId: "nj-gate-b",
         status: "PENDING",
-        createdAt: "2026-07-12T11:22:00Z"
+        createdAt: `${currentYear}-07-12T11:22:00Z`
       }
     ]
   },
@@ -365,7 +367,7 @@ let stadiums: Stadium[] = [
     latitude: 19.3029,
     longitude: -99.1505,
     capacity: 87523,
-    eventName: "FIFA World Cup 2026 - Tournament Opening Match",
+    eventName: "FIFA World Cup - Tournament Opening Match",
     crowdDensity: CrowdDensity.HIGH,
     parkingOccupancy: 88,
     weatherAlert: "None",
@@ -378,7 +380,7 @@ let stadiums: Stadium[] = [
         stage: "Tournament Opening Match",
         teamA: "Mexico",
         teamB: "Croatia",
-        date: "2026-06-11",
+        date: `${currentYear}-06-11`,
         time: "18:00",
         status: "COMPLETED",
         score: "2-0",
@@ -390,7 +392,7 @@ let stadiums: Stadium[] = [
         stage: "Group Stage",
         teamA: "Mexico",
         teamB: "Japan",
-        date: "2026-06-18",
+        date: `${currentYear}-06-18`,
         time: "20:00",
         status: "SCHEDULED"
       },
@@ -400,7 +402,7 @@ let stadiums: Stadium[] = [
         stage: "Round of 16",
         teamA: "Winner Group A",
         teamB: "Runner-up Group C",
-        date: "2026-06-30",
+        date: `${currentYear}-06-30`,
         time: "17:00",
         status: "SCHEDULED"
       }
@@ -489,7 +491,7 @@ let stadiums: Stadium[] = [
     latitude: 33.9534,
     longitude: -118.339,
     capacity: 70240,
-    eventName: "FIFA World Cup 2026 - Matchday 3",
+    eventName: "FIFA World Cup - Matchday 3",
     crowdDensity: CrowdDensity.LOW,
     parkingOccupancy: 30,
     weatherAlert: "None",
@@ -502,7 +504,7 @@ let stadiums: Stadium[] = [
         stage: "USA Opening Match",
         teamA: "USA",
         teamB: "Canada",
-        date: "2026-06-12",
+        date: `${currentYear}-06-12`,
         time: "17:00",
         status: "COMPLETED",
         score: "3-2",
@@ -514,7 +516,7 @@ let stadiums: Stadium[] = [
         stage: "Group Stage",
         teamA: "Brazil",
         teamB: "South Korea",
-        date: "2026-06-19",
+        date: `${currentYear}-06-19`,
         time: "19:00",
         status: "SCHEDULED"
       }
@@ -606,7 +608,7 @@ app.post("/api/stadiums", (req, res) => {
     latitude: numLat || 0,
     longitude: numLng || 0,
     capacity: numCapacity,
-    eventName: eventName || "FIFA World Cup 2026 Matchday",
+    eventName: eventName || "FIFA World Cup Matchday",
     crowdDensity: CrowdDensity.LOW,
     parkingOccupancy: 0,
     weatherAlert: "None",
@@ -967,7 +969,7 @@ app.post("/api/gemini/chat", async (req, res) => {
     ? stadium.incidents.map(i => `- ${i.title} (${i.category}): Severity: ${i.severity}, Status: ${i.status}, Located near ${i.section || 'facility'}. Details: ${i.description}`).join("\n")
     : "No active critical safety incidents or hazards reported.";
 
-  const systemInstruction = `You are StadiumGPT, the official Generative AI operational assistant and digital host for the FIFA World Cup 2026.
+  const systemInstruction = `You are StadiumGPT, the official Generative AI operational assistant and digital host for FIFA World Cup match events.
 You are running contextualized, real-time assistance specifically for ${stadium.name} in ${stadium.city}, ${stadium.country}.
 Answer as a highly professional, polite, and helpful assistant. Deliver crisp, structured, markdown responses. Always direct fans to the facilities with shorter lines or recommended paths.
 

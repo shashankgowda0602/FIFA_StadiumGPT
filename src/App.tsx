@@ -359,7 +359,7 @@ export default function App() {
                 Stadium<span className="font-bold text-[#C5A059]">GPT</span>
                 <span className="text-[9px] bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 px-1.5 py-0.5 rounded ml-2 font-mono tracking-widest font-semibold">OS</span>
               </h1>
-              <span className="text-[8px] text-white/40 uppercase tracking-widest font-semibold leading-none mt-1 block">FIFA World Cup 2026</span>
+              <span className="text-[8px] text-white/40 uppercase tracking-widest font-semibold leading-none mt-1 block">FIFA World Cup</span>
             </div>
           </div>
 
@@ -700,7 +700,7 @@ export default function App() {
 
       {/* 5. METADATA FOOTER */}
       <footer className="bg-[#111216] border-t border-white/10 py-6 px-4 text-center text-xs text-white/40 font-mono" id="platform-footer-credits">
-        <span>STADIUMGPT OS • FIFA WORLD CUP 2026 DIGITAL VENUE PLATFORM</span>
+        <span>STADIUMGPT OS • FIFA WORLD CUP DIGITAL VENUE PLATFORM</span>
         <div className="mt-1">
           Authorized Operator Console • Secure Session • All rights reserved
         </div>
