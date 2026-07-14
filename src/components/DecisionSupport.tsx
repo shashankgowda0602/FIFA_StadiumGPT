@@ -23,12 +23,29 @@ interface DecisionSupportProps {
   currentUserRole: UserRole;
 }
 
+const getCategoryIcon = (cat: string) => {
+  switch (cat) {
+    case "CROWD": return <UsersIcon className="w-4 h-4 text-indigo-400" />;
+    case "SECURITY": return <ShieldAlert className="w-4 h-4 text-red-400" />;
+    case "MEDICAL": return <HeartHandshake className="w-4 h-4 text-rose-400" />;
+    case "FACILITY": return <Cpu className="w-4 h-4 text-amber-400" />;
+    case "TRAFFIC": return <TrafficCone className="w-4 h-4 text-sky-400" />;
+    default: return <Sparkles className="w-4 h-4 text-emerald-400" />;
+  }
+};
+
+const getConfidenceBadgeColor = (score: number) => {
+  if (score >= 90) return "text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
+  if (score >= 75) return "text-amber-400 bg-amber-500/10 border-amber-500/30";
+  return "text-blue-400 bg-blue-500/10 border-blue-500/30";
+};
+
 export default function DecisionSupport({ stadium, onExecuteAction, currentUserRole }: DecisionSupportProps) {
   const [recommendations, setRecommendations] = React.useState<AIRecommendation[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<"ALL" | "CROWD" | "MEDICAL" | "FACILITY">("ALL");
 
-  const fetchRecommendations = async () => {
+  const triggerFetchRecommendations = React.useCallback(async (active: boolean) => {
     setLoading(true);
     try {
       const response = await fetch("/api/gemini/decision-support", {
@@ -42,18 +59,26 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
       }
 
       const data = await response.json();
-      setRecommendations(data);
+      if (active) {
+        setRecommendations(data);
+      }
     } catch (err) {
       console.error("Error fetching AI recommendations:", err);
     } finally {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+      }
     }
-  };
+  }, [stadium.id]);
 
   // Re-fetch recommendations when stadium changes
   React.useEffect(() => {
-    fetchRecommendations();
-  }, [stadium]);
+    let active = true;
+    triggerFetchRecommendations(active);
+    return () => {
+      active = false;
+    };
+  }, [stadium.id, triggerFetchRecommendations]);
 
   const handleExecute = (rec: AIRecommendation) => {
     onExecuteAction(rec);
@@ -63,26 +88,11 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
     );
   };
 
-  const getCategoryIcon = (cat: string) => {
-    switch (cat) {
-      case "CROWD": return <UsersIcon className="w-4 h-4 text-indigo-400" />;
-      case "SECURITY": return <ShieldAlert className="w-4 h-4 text-red-400" />;
-      case "MEDICAL": return <HeartHandshake className="w-4 h-4 text-rose-400" />;
-      case "FACILITY": return <Cpu className="w-4 h-4 text-amber-400" />;
-      case "TRAFFIC": return <TrafficCone className="w-4 h-4 text-sky-400" />;
-      default: return <Sparkles className="w-4 h-4 text-emerald-400" />;
-    }
-  };
-
-  const getConfidenceBadgeColor = (score: number) => {
-    if (score >= 90) return "text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
-    if (score >= 75) return "text-amber-400 bg-amber-500/10 border-amber-500/30";
-    return "text-blue-400 bg-blue-500/10 border-blue-500/30";
-  };
-
-  const filteredRecs = recommendations.filter(r => 
-    activeTab === "ALL" || r.category === activeTab
-  );
+  const filteredRecs = React.useMemo(() => {
+    return recommendations.filter(r => 
+      activeTab === "ALL" || r.category === activeTab
+    );
+  }, [recommendations, activeTab]);
 
   return (
     <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl" id="decision-support-panel">
@@ -96,7 +106,7 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
           <p className="text-xs text-white/50">Proactive tournament orchestration models powered by Google Gemini</p>
         </div>
         <button
-          onClick={fetchRecommendations}
+          onClick={() => triggerFetchRecommendations(true)}
           disabled={loading}
           className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/80 rounded-lg text-xs font-semibold border border-white/10 disabled:text-white/20 transition-colors cursor-pointer"
         >

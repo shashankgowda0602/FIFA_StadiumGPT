@@ -34,6 +34,53 @@ import {
   Check
 } from "lucide-react";
 
+// Render Category colors
+const getCategoryColor = (category: FacilityCategory) => {
+  switch (category) {
+    case FacilityCategory.ENTRY_GATE:
+    case FacilityCategory.EXIT_GATE:
+      return "bg-indigo-500 text-white";
+    case FacilityCategory.RESTROOM:
+      return "bg-blue-500 text-white";
+    case FacilityCategory.FOOD_COURT:
+    case FacilityCategory.RESTAURANT:
+      return "bg-amber-500 text-white";
+    case FacilityCategory.MEDICAL_CENTER:
+      return "bg-rose-500 text-white";
+    case FacilityCategory.EMERGENCY_EXIT:
+      return "bg-red-600 text-white";
+    case FacilityCategory.VIP_LOUNGE:
+      return "bg-purple-600 text-white";
+    default:
+      return "bg-slate-500 text-white";
+  }
+};
+
+const getStatusColor = (status: FacilityStatus) => {
+  switch (status) {
+    case FacilityStatus.OPERATIONAL:
+      return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
+    case FacilityStatus.CONGESTED:
+      return "text-amber-400 border-amber-500/30 bg-amber-500/10";
+    case FacilityStatus.LIMITED_SERVICE:
+      return "text-sky-400 border-sky-500/30 bg-sky-500/10";
+    case FacilityStatus.CLOSED:
+      return "text-slate-400 border-slate-500/30 bg-slate-500/10";
+    case FacilityStatus.EMERGENCY:
+      return "text-red-400 border-red-500/30 bg-red-500/10 animate-pulse";
+  }
+};
+
+const getQueueLabel = (queue: QueueLength) => {
+  switch (queue) {
+    case QueueLength.NONE: return "No Queue";
+    case QueueLength.SHORT: return "Short Wait (2-5m)";
+    case QueueLength.MEDIUM: return "Medium Wait (5-15m)";
+    case QueueLength.LONG: return "Long Wait (15-30m)";
+    case QueueLength.CRITICAL: return "Critical Congestion (30m+)";
+  }
+};
+
 interface InteractiveMapProps {
   stadium: Stadium;
   onUpdateFacility?: (facilityId: string, updates: Partial<Facility>) => void;
@@ -98,60 +145,17 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
     };
   }, []);
 
-  // Render Category colors
-  const getCategoryColor = (category: FacilityCategory) => {
-    switch (category) {
-      case FacilityCategory.ENTRY_GATE:
-      case FacilityCategory.EXIT_GATE:
-        return "bg-indigo-500 text-white";
-      case FacilityCategory.RESTROOM:
-        return "bg-blue-500 text-white";
-      case FacilityCategory.FOOD_COURT:
-      case FacilityCategory.RESTAURANT:
-        return "bg-amber-500 text-white";
-      case FacilityCategory.MEDICAL_CENTER:
-        return "bg-rose-500 text-white";
-      case FacilityCategory.EMERGENCY_EXIT:
-        return "bg-red-600 text-white";
-      case FacilityCategory.VIP_LOUNGE:
-        return "bg-purple-600 text-white";
-      default:
-        return "bg-slate-500 text-white";
-    }
-  };
-
-  const getStatusColor = (status: FacilityStatus) => {
-    switch (status) {
-      case FacilityStatus.OPERATIONAL:
-        return "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
-      case FacilityStatus.CONGESTED:
-        return "text-amber-400 border-amber-500/30 bg-amber-500/10";
-      case FacilityStatus.LIMITED_SERVICE:
-        return "text-sky-400 border-sky-500/30 bg-sky-500/10";
-      case FacilityStatus.CLOSED:
-        return "text-slate-400 border-slate-500/30 bg-slate-500/10";
-      case FacilityStatus.EMERGENCY:
-        return "text-red-400 border-red-500/30 bg-red-500/10 animate-pulse";
-    }
-  };
-
-  const getQueueLabel = (queue: QueueLength) => {
-    switch (queue) {
-      case QueueLength.NONE: return "No Queue";
-      case QueueLength.SHORT: return "Short Wait (2-5m)";
-      case QueueLength.MEDIUM: return "Medium Wait (5-15m)";
-      case QueueLength.LONG: return "Long Wait (15-30m)";
-      case QueueLength.CRITICAL: return "Critical Congestion (30m+)";
-    }
-  };
-
-  // Filter facilities
-  const filteredFacilities = stadium.facilities.filter(f => {
-    const matchesCategory = filterCategory === "ALL" || f.category === filterCategory;
-    const matchesSearch = f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          f.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Filter facilities (optimized with useMemo to prevent processing overhead on high-frequency rerenders)
+  const filteredFacilities = React.useMemo(() => {
+    const searchLower = searchQuery.toLowerCase();
+    return stadium.facilities.filter(f => {
+      const matchesCategory = filterCategory === "ALL" || f.category === filterCategory;
+      const matchesSearch = !searchLower || 
+                            f.name.toLowerCase().includes(searchLower) || 
+                            f.description.toLowerCase().includes(searchLower);
+      return matchesCategory && matchesSearch;
+    });
+  }, [stadium.facilities, filterCategory, searchQuery]);
 
   // Calculate simulated pathing on map avoiding the pitch (wrapping around pitch at R = 37)
   const handleCalculateNavigation = () => {

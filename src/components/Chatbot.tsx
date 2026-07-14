@@ -18,12 +18,23 @@ import {
   Compass, 
   Maximize2 
 } from "lucide-react";
+import { useTranslation } from "../TranslationContext";
+
+// Suggested questions based on context
+const SUGGESTED_PROMPTS = [
+  "Which gate has the shortest queue?",
+  "Show me where the medical center is.",
+  "Do you have vegetarian food options?",
+  "How crowded is the stadium right now?",
+  "What announcements are active?"
+];
 
 interface ChatbotProps {
   stadium: Stadium;
 }
 
 export default function Chatbot({ stadium }: ChatbotProps) {
+  const { language, t } = useTranslation();
   const [messages, setMessages] = React.useState<StadiumGPTMessage[]>([]);
   const [inputValue, setInputValue] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
@@ -33,28 +44,21 @@ export default function Chatbot({ stadium }: ChatbotProps) {
   const chatEndRef = React.useRef<HTMLDivElement>(null);
   const speechUtteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Suggested questions based on context
-  const suggestedPrompts = [
-    "Which gate has the shortest queue?",
-    "Show me where the medical center is.",
-    "Do you have vegetarian food options?",
-    "How crowded is the stadium right now?",
-    "What announcements are active?"
-  ];
-
   // Auto-load welcome message
   React.useEffect(() => {
+    const title = t("Chat with StadiumGPT Helper");
+    const desc = t("Ask anything about gates, concession wait times, restrooms, and security rules");
     setMessages([
       {
         id: "welcome",
         sender: "ai",
-        text: `### FIFA Stadium Assistant Online ⚽\n\nHello! I am **StadiumGPT**, your dedicated operational guide for **${stadium.name}** in ${stadium.city}.\n\nI have access to real-time gate wait times, medical stations, parking status, and active emergency bulletins.\n\n*How can I assist your matchday experience today?*`,
+        text: `### ${title} ⚽\n\n${t("Ask anything about gates, concession wait times, restrooms, and security rules")}.\n\n*${t("How can I assist your matchday experience today?")}*`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        suggestedPrompts: suggestedPrompts
+        suggestedPrompts: SUGGESTED_PROMPTS
       }
     ]);
     stopSpeaking();
-  }, [stadium]);
+  }, [stadium, language]);
 
   // Auto scroll to bottom
   React.useEffect(() => {
@@ -84,6 +88,17 @@ export default function Chatbot({ stadium }: ChatbotProps) {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
+
+    const langTags: Record<string, string> = {
+      en: "en-US",
+      es: "es-ES",
+      fr: "fr-FR",
+      de: "de-DE",
+      ar: "ar-AE",
+      pt: "pt-PT"
+    };
+    utterance.lang = langTags[language] || "en-US";
+
     speechUtteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
   };
@@ -110,7 +125,8 @@ export default function Chatbot({ stadium }: ChatbotProps) {
         body: JSON.stringify({
           message: textToSend,
           stadiumId: stadium.id,
-          history: messages.slice(-6) // Pass short chat history for context
+          history: messages.slice(-6), // Pass short chat history for context
+          language: language
         })
       });
 
@@ -381,7 +397,7 @@ export default function Chatbot({ stadium }: ChatbotProps) {
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder={isListening ? "Listening closely... speak now" : "Ask about gate queues, vegetarian concessions, Clinic location..."}
+          placeholder={isListening ? t("Listening closely... speak now") : t("Type stadium question...")}
           disabled={isLoading}
           className="flex-1 px-4 py-2.5 bg-black border border-white/10 rounded-lg text-white text-xs placeholder-white/30 focus:outline-none focus:border-[#C5A059]/50 focus:ring-1 focus:ring-[#C5A059]/30"
         />

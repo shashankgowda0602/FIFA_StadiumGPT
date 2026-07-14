@@ -947,7 +947,7 @@ app.get("/api/stadiums/:id/predictive", (req, res) => {
 
 // 10. StadiumGPT Generative RAG Assistant API
 app.post("/api/gemini/chat", async (req, res) => {
-  const { message, stadiumId, history } = req.body;
+  const { message, stadiumId, history, language } = req.body;
   if (!message || !stadiumId) {
     res.status(400).json({ error: "Missing message or stadiumId" });
     return;
@@ -969,7 +969,7 @@ app.post("/api/gemini/chat", async (req, res) => {
     ? stadium.incidents.map(i => `- ${i.title} (${i.category}): Severity: ${i.severity}, Status: ${i.status}, Located near ${i.section || 'facility'}. Details: ${i.description}`).join("\n")
     : "No active critical safety incidents or hazards reported.";
 
-  const systemInstruction = `You are StadiumGPT, the official Generative AI operational assistant and digital host for FIFA World Cup match events.
+  let systemInstruction = `You are StadiumGPT, the official Generative AI operational assistant and digital host for FIFA World Cup match events.
 You are running contextualized, real-time assistance specifically for ${stadium.name} in ${stadium.city}, ${stadium.country}.
 Answer as a highly professional, polite, and helpful assistant. Deliver crisp, structured, markdown responses. Always direct fans to the facilities with shorter lines or recommended paths.
 
@@ -994,66 +994,17 @@ RESPONSIVE INSTRUCTIONS:
 3. Keep answers friendly, crisp, actionable, and formatted beautifully in Markdown lists or small tables. Support multilingual responses naturally if the user asks in Spanish, French, Italian, etc.
 4. Keep the output extremely focused on the stadium data. Do not make up fake gates or facilities that do not exist in the context above.`;
 
+  const targetLang = (language || "en").toLowerCase();
+  
+  if (targetLang !== "en") {
+    systemInstruction += `\n\nCRITICAL MANDATE: The operator/user has selected the language: "${language}" (code: "${targetLang}").
+You MUST translate all output dynamically and write your entire response strictly in "${language}".
+Do not use English words for descriptions, instructions, or recommendations, except for official proper names of teams or stadiums if required. Ensure dates, wait times, labels, titles, and headers are fully translated into "${language}".`;
+  }
+
   if (!ai) {
     // Fallback smart rule-based chatbot when Gemini API key is missing
-    const msgLower = message.toLowerCase();
-    let reply = "";
-
-    if (msgLower.includes("gate") || msgLower.includes("entrance")) {
-      const bestGate = stadium.facilities
-        .filter(f => f.category === FacilityCategory.ENTRY_GATE)
-        .sort((a, b) => a.waitTimeMinutes - b.waitTimeMinutes)[0];
-      const congestedGates = stadium.facilities
-        .filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.CONGESTED);
-
-      reply = `### Welcome to ${stadium.name} Entry Gates Guide\n\n`;
-      if (bestGate) {
-        reply += `👉 **Recommendation:** Head to **${bestGate.name}** which has a short queue. Current wait time is only **${bestGate.waitTimeMinutes} minutes**.\n\n`;
-      }
-      if (congestedGates.length > 0) {
-        reply += `⚠️ **Aviation Warning:** Avoid **${congestedGates.map(g => g.name).join(", ")}** due to extreme pedestrian congestion (**${congestedGates[0].waitTimeMinutes} mins** wait time).\n`;
-      }
-    } else if (msgLower.includes("restroom") || msgLower.includes("toilet") || msgLower.includes("bathroom")) {
-      const openRestroom = stadium.facilities
-        .filter(f => f.category === FacilityCategory.RESTROOM)
-        .sort((a, b) => a.waitTimeMinutes - b.waitTimeMinutes)[0];
-      reply = `### Restroom Facilities Info\n\n`;
-      if (openRestroom) {
-        reply += `🚽 The nearest optimal restroom is **${openRestroom.name}** with a short wait of **${openRestroom.waitTimeMinutes} minutes**.\n`;
-      } else {
-        reply += `All facilities are currently reported open. Please check the interactive map overlay for section indicators.`;
-      }
-    } else if (msgLower.includes("food") || msgLower.includes("vegetarian") || msgLower.includes("halal") || msgLower.includes("eat")) {
-      const foodSpots = stadium.facilities.filter(f => f.category === FacilityCategory.FOOD_COURT || f.category === FacilityCategory.RESTAURANT || f.category === FacilityCategory.VIP_LOUNGE);
-      reply = `### Food & Beverage Guide\n\nHere are the active concessions near you:\n\n`;
-      foodSpots.forEach(f => {
-        reply += `🍔 **${f.name}** (Wait: ${f.waitTimeMinutes}m)\n`;
-        reply += `   - *Vibe:* ${f.description}\n`;
-        if (f.foodDetails) {
-          reply += `   - *Dietary options:* ${f.foodDetails.hasVegetarian ? '✅ Vegetarian' : '❌ No Veg'} | ${f.foodDetails.hasHalal ? '✅ Halal' : '❌ No Halal'}\n`;
-          reply += `   - *Popular:* ${f.foodDetails.popularItems.join(", ")}\n`;
-        }
-        reply += `\n`;
-      });
-    } else if (msgLower.includes("medical") || msgLower.includes("emergency") || msgLower.includes("hurt") || msgLower.includes("first aid")) {
-      const medical = stadium.facilities.find(f => f.category === FacilityCategory.MEDICAL_CENTER);
-      reply = `### 🚨 EMERGENCY MEDICAL ASSISTANCE\n\n`;
-      if (medical) {
-        reply += `🏥 **Immediate Care Center:** The official **${medical.name}** is operational at **${medical.description}**.\n\n`;
-      }
-      reply += `Please locate the nearest security officer or volunteer helper. If you are experiencing an acute emergency, please report this incident using our **Report Incident** form on the live operator suite immediately!`;
-    } else if (msgLower.includes("match") || msgLower.includes("score") || msgLower.includes("play")) {
-      reply = `### Matchday Information ⚽\n\n**${stadium.eventName}**\n\n`;
-      stadium.matchSchedule.forEach(m => {
-        reply += `- **${m.teamA} vs ${m.teamB}** (${m.stage})\n`;
-        reply += `  - Status: \`${m.status}\` ${m.score ? `| Score: ${m.score}` : ''}\n`;
-        reply += `  - Schedule: ${m.date} at ${m.time}\n\n`;
-      });
-    } else {
-      reply = `### StadiumGPT Response\n\nHello! I am **StadiumGPT**, your intelligent FIFA World Cup companion. I can help you with real-time guides about gates, restrooms, food courts, matches, and safety rules at **${stadium.name}**.\n\nWhat can I assist you with today?\n\n*Try asking:* "Which gate is shortest?", "Show me vegetarian food spots", or "Where is the medical center?"`;
-    }
-
-    res.json({ text: reply });
+    res.json({ text: getRuleBasedChatReply(message, stadium, targetLang) });
     return;
   }
 
@@ -1082,10 +1033,294 @@ RESPONSIVE INSTRUCTIONS:
     const aiText = response.text || "Sorry, I could not generate a response. Please check back shortly.";
     res.json({ text: aiText });
   } catch (err: any) {
-    console.error("Gemini API Error in server.ts:", err);
-    res.status(500).json({ error: "Failed to query Gemini API", details: err.message });
+    console.error("Gemini API Error in server.ts (falling back to rules):", err);
+    // Graceful fallback to local rule-based response on any API error/quota limit
+    res.json({ text: getRuleBasedChatReply(message, stadium, targetLang) });
   }
 });
+
+
+// Helper function for local chatbot fallback responses
+function getRuleBasedChatReply(message: string, stadium: Stadium, targetLang: string): string {
+  const msgLower = message.toLowerCase();
+  let reply = "";
+
+  if (msgLower.includes("gate") || msgLower.includes("entrance") || msgLower.includes("puerta") || msgLower.includes("entrée") || msgLower.includes("eingang") || msgLower.includes("بوابة") || msgLower.includes("portão")) {
+    const bestGate = stadium.facilities
+      .filter(f => f.category === FacilityCategory.ENTRY_GATE)
+      .sort((a, b) => a.waitTimeMinutes - b.waitTimeMinutes)[0];
+    const congestedGates = stadium.facilities
+      .filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.CONGESTED);
+
+    if (targetLang === "es") {
+      reply = `### Bienvenido a la Guía de Puertas de Entrada de ${stadium.name}\n\n`;
+      if (bestGate) {
+        reply += `👉 **Recomendación:** Dirígete a **${bestGate.name}**, que tiene una fila corta. El tiempo de espera actual es de solo **${bestGate.waitTimeMinutes} minutos**.\n\n`;
+      }
+      if (congestedGates.length > 0) {
+        reply += `⚠️ **Advertencia:** Evita **${congestedGates.map(g => g.name).join(", ")}** debido a la congestión peatonal extrema (tiempo de espera de **${congestedGates[0].waitTimeMinutes} minutos**).\n`;
+      }
+    } else if (targetLang === "fr") {
+      reply = `### Bienvenue sur le Guide des Portes d'Entrée de ${stadium.name}\n\n`;
+      if (bestGate) {
+        reply += `👉 **Recommandation:** Dirigez-vous vers **${bestGate.name}**, qui a une file d'attente courte. Le temps d'attente actuel est de seulement **${bestGate.waitTimeMinutes} minutes**.\n\n`;
+      }
+      if (congestedGates.length > 0) {
+        reply += `⚠️ **Avertissement de congestion:** Évitez **${congestedGates.map(g => g.name).join(", ")}** en raison d'une congestion piétonne extrême (temps d'attente de **${congestedGates[0].waitTimeMinutes} minutes**).\n`;
+      }
+    } else if (targetLang === "de") {
+      reply = `### Willkommen beim Eingangstor-Führer für ${stadium.name}\n\n`;
+      if (bestGate) {
+        reply += `👉 **Empfehlung:** Gehen Sie zu **${bestGate.name}** mit kurzer Schlange. Die aktuelle Wartezeit beträgt nur **${bestGate.waitTimeMinutes} Minuten**.\n\n`;
+      }
+      if (congestedGates.length > 0) {
+        reply += `⚠️ **Stauwarnung:** Vermeiden Sie **${congestedGates.map(g => g.name).join(", ")}** wegen extremer Überlastung (Wartezeit **${congestedGates[0].waitTimeMinutes} Min**).\n`;
+      }
+    } else if (targetLang === "ar") {
+      reply = `### مرحبًا بك في دليل بوابات الدخول لـ ${stadium.name}\n\n`;
+      if (bestGate) {
+        reply += `👉 **توصية:** توجه إلى **${bestGate.name}** التي بها طابور قصير. وقت الانتظار الحالي هو **${bestGate.waitTimeMinutes} دقائق** فقط.\n\n`;
+      }
+      if (congestedGates.length > 0) {
+        reply += `⚠️ **تحذير من الازدحام:** تجنب **${congestedGates.map(g => g.name).join(", ")}** بسبب الازدحام الشديد للمشاة (وقت الانتظار **${congestedGates[0].waitTimeMinutes} دقائق**).\n`;
+      }
+    } else if (targetLang === "pt") {
+      reply = `### Bem-vindo ao Guia de Portões de Entrada de ${stadium.name}\n\n`;
+      if (bestGate) {
+        reply += `👉 **Recomendação:** Vá para o **${bestGate.name}**, que tem fila curta. O tempo de espera atual é de apenas **${bestGate.waitTimeMinutes} minutos**.\n\n`;
+      }
+      if (congestedGates.length > 0) {
+        reply += `⚠️ **Aviso de Congestionamento:** Evite **${congestedGates.map(g => g.name).join(", ")}** devido ao congestionamento extremo de pedestres (tempo de espera de **${congestedGates[0].waitTimeMinutes} minutos**).\n`;
+      }
+    } else {
+      reply = `### Welcome to ${stadium.name} Entry Gates Guide\n\n`;
+      if (bestGate) {
+        reply += `👉 **Recommendation:** Head to **${bestGate.name}** which has a short queue. Current wait time is only **${bestGate.waitTimeMinutes} minutes**.\n\n`;
+      }
+      if (congestedGates.length > 0) {
+        reply += `⚠️ **Warning:** Avoid **${congestedGates.map(g => g.name).join(", ")}** due to extreme pedestrian congestion (**${congestedGates[0].waitTimeMinutes} mins** wait time).\n`;
+      }
+    }
+  } else if (msgLower.includes("restroom") || msgLower.includes("toilet") || msgLower.includes("bathroom") || msgLower.includes("baño") || msgLower.includes("sanitaire") || msgLower.includes("toilette") || msgLower.includes("arwc") || msgLower.includes("wc") || msgLower.includes("banheiro") || msgLower.includes("مرحاض")) {
+    const openRestroom = stadium.facilities
+      .filter(f => f.category === FacilityCategory.RESTROOM)
+      .sort((a, b) => a.waitTimeMinutes - b.waitTimeMinutes)[0];
+    
+    if (targetLang === "es") {
+      reply = `### Información de Baños\n\n`;
+      if (openRestroom) {
+        reply += `🚽 El baño óptimo más cercano es **${openRestroom.name}** con una corta espera de **${openRestroom.waitTimeMinutes} minutos**.\n`;
+      } else {
+        reply += `Todos los baños están reportados abiertos. Por favor revisa el mapa interactivo.`;
+      }
+    } else if (targetLang === "fr") {
+      reply = `### Guide des Toilettes\n\n`;
+      if (openRestroom) {
+        reply += `🚽 Les toilettes optimales les plus proches sont **${openRestroom.name}** avec une attente de seulement **${openRestroom.waitTimeMinutes} minutes**.\n`;
+      } else {
+        reply += `Tous les sanitaires sont signalés ouverts. Veuillez vérifier la carte interactive.`;
+      }
+    } else if (targetLang === "de") {
+      reply = `### Toiletten-Informationen\n\n`;
+      if (openRestroom) {
+        reply += `🚽 Die nächste optimale Toilette ist **${openRestroom.name}** mit einer kurzen Wartezeit von **${openRestroom.waitTimeMinutes} Minuten**.\n`;
+      } else {
+        reply += `Alle Toiletten sind geöffnet. Bitte prüfen Sie den interaktiven Plan.`;
+      }
+    } else if (targetLang === "ar") {
+      reply = `### معلومات المراحيض\n\n`;
+      if (openRestroom) {
+        reply += `🚽 أقرب دورة مياه مثالية هي **${openRestroom.name}** مع وقت انتظار قصير يبلغ **${openRestroom.waitTimeMinutes} دقائق**.\n`;
+      } else {
+        reply += `جميع المراحيض مفتوحة حاليًا. يرجى مراجعة الخريطة التفاعلية.`;
+      }
+    } else if (targetLang === "pt") {
+      reply = `### Informações sobre Banheiros\n\n`;
+      if (openRestroom) {
+        reply += `🚽 O banheiro ideal mais próximo é o **${openRestroom.name}** com uma espera curta de **${openRestroom.waitTimeMinutes} minutos**.\n`;
+      } else {
+        reply += `Todos os banheiros estão abertos. Por favor, verifique o mapa interativo.`;
+      }
+    } else {
+      reply = `### Restroom Facilities Info\n\n`;
+      if (openRestroom) {
+        reply += `🚽 The nearest optimal restroom is **${openRestroom.name}** with a short wait of **${openRestroom.waitTimeMinutes} minutes**.\n`;
+      } else {
+        reply += `All facilities are currently reported open. Please check the interactive map overlay for section indicators.`;
+      }
+    }
+  } else if (msgLower.includes("food") || msgLower.includes("vegetarian") || msgLower.includes("halal") || msgLower.includes("eat") || msgLower.includes("comida") || msgLower.includes("nourriture") || msgLower.includes("essen") || msgLower.includes("طعام") || msgLower.includes("comer")) {
+    const foodSpots = stadium.facilities.filter(f => f.category === FacilityCategory.FOOD_COURT || f.category === FacilityCategory.RESTAURANT || f.category === FacilityCategory.VIP_LOUNGE);
+    
+    if (targetLang === "es") {
+      reply = `### Guía de Comida y Bebida\n\nAquí tienes las concesiones activas cerca de ti:\n\n`;
+      foodSpots.forEach(f => {
+        reply += `🍔 **${f.name}** (Espera: ${f.waitTimeMinutes}m)\n`;
+        reply += `   - *Descripción:* ${f.description}\n`;
+        if (f.foodDetails) {
+          reply += `   - *Opciones dietéticas:* ${f.foodDetails.hasVegetarian ? '✅ Vegetariano' : '❌ No Veg'} | ${f.foodDetails.hasHalal ? '✅ Halal' : '❌ No Halal'}\n`;
+          reply += `   - *Populares:* ${f.foodDetails.popularItems.join(", ")}\n`;
+        }
+        reply += `\n`;
+      });
+    } else if (targetLang === "fr") {
+      reply = `### Guide Restauration & Boissons\n\nVoici les concessions actives près de vous:\n\n`;
+      foodSpots.forEach(f => {
+        reply += `🍔 **${f.name}** (Attente: ${f.waitTimeMinutes}m)\n`;
+        reply += `   - *Vibe:* ${f.description}\n`;
+        if (f.foodDetails) {
+          reply += `   - *Options diététiques:* ${f.foodDetails.hasVegetarian ? '✅ Végétarien' : '❌ Non Veg'} | ${f.foodDetails.hasHalal ? '✅ Halal' : '❌ Non Halal'}\n`;
+          reply += `   - *Populaire:* ${f.foodDetails.popularItems.join(", ")}\n`;
+        }
+        reply += `\n`;
+      });
+    } else if (targetLang === "de") {
+      reply = `### Essen- & Getränkeführer\n\nHier sind die aktiven Verkaufsstände in Ihrer Nähe:\n\n`;
+      foodSpots.forEach(f => {
+        reply += `🍔 **${f.name}** (Wartezeit: ${f.waitTimeMinutes} Min)\n`;
+        reply += `   - *Beschreibung:* ${f.description}\n`;
+        if (f.foodDetails) {
+          reply += `   - *Ernährung:* ${f.foodDetails.hasVegetarian ? '✅ Vegetarisch' : '❌ Nicht Veg'} | ${f.foodDetails.hasHalal ? '✅ Halal' : '❌ Nicht Halal'}\n`;
+          reply += `   - *Beliebt:* ${f.foodDetails.popularItems.join(", ")}\n`;
+        }
+        reply += `\n`;
+      });
+    } else if (targetLang === "ar") {
+      reply = `### دليل المأكولات والمشروبات\n\nإليك كشك الخدمات النشط بالقرب منك:\n\n`;
+      foodSpots.forEach(f => {
+        reply += `🍔 **${f.name}** (الانتظار: ${f.waitTimeMinutes} دقيقة)\n`;
+        reply += `   - *الوصف:* ${f.description}\n`;
+        if (f.foodDetails) {
+          reply += `   - *خيارات غذائية:* ${f.foodDetails.hasVegetarian ? '✅ نباتي' : '❌ غير نباتي'} | ${f.foodDetails.hasHalal ? '✅ حلال' : '❌ غير حلال'}\n`;
+          reply += `   - *الأكثر مبيعاً:* ${f.foodDetails.popularItems.join(", ")}\n`;
+        }
+        reply += `\n`;
+      });
+    } else if (targetLang === "pt") {
+      reply = `### Guia de Alimentação\n\nAqui estão as concessões ativas perto de você:\n\n`;
+      foodSpots.forEach(f => {
+        reply += `🍔 **${f.name}** (Espera: ${f.waitTimeMinutes}m)\n`;
+        reply += `   - *Descrição:* ${f.description}\n`;
+        if (f.foodDetails) {
+          reply += `   - *Opções dietéticas:* ${f.foodDetails.hasVegetarian ? '✅ Vegetariano' : '❌ Não Veg'} | ${f.foodDetails.hasHalal ? '✅ Halal' : '❌ Não Halal'}\n`;
+          reply += `   - *Populares:* ${f.foodDetails.popularItems.join(", ")}\n`;
+        }
+        reply += `\n`;
+      });
+    } else {
+      reply = `### Food & Beverage Guide\n\nHere are the active concessions near you:\n\n`;
+      foodSpots.forEach(f => {
+        reply += `🍔 **${f.name}** (Wait: ${f.waitTimeMinutes}m)\n`;
+        reply += `   - *Vibe:* ${f.description}\n`;
+        if (f.foodDetails) {
+          reply += `   - *Dietary options:* ${f.foodDetails.hasVegetarian ? '✅ Vegetarian' : '❌ No Veg'} | ${f.foodDetails.hasHalal ? '✅ Halal' : '❌ No Halal'}\n`;
+          reply += `   - *Popular:* ${f.foodDetails.popularItems.join(", ")}\n`;
+        }
+        reply += `\n`;
+      });
+    }
+  } else if (msgLower.includes("medical") || msgLower.includes("emergency") || msgLower.includes("hurt") || msgLower.includes("first aid") || msgLower.includes("médico") || msgLower.includes("médical") || msgLower.includes("krank") || msgLower.includes("arzt") || msgLower.includes("طبيب") || msgLower.includes("إسعاف")) {
+    const medical = stadium.facilities.find(f => f.category === FacilityCategory.MEDICAL_CENTER);
+    
+    if (targetLang === "es") {
+      reply = `### 🚨 ASISTENCIA MÉDICA DE EMERGENCIA\n\n`;
+      if (medical) {
+        reply += `🏥 **Centro de Atención Inmediata:** El oficial **${medical.name}** está operativo en **${medical.description}**.\n\n`;
+      }
+      reply += `Por favor, localiza al oficial de seguridad o voluntario más cercano. Si estás experimentando una emergencia grave, ¡reporta el incidente de inmediato usando el formulario **Reportar Incidente** en la consola del operador!`;
+    } else if (targetLang === "fr") {
+      reply = `### 🚨 ASSISTANCE MÉDICALE D'URGENCE\n\n`;
+      if (medical) {
+        reply += `🏥 **Centre de Soins Immédiats:** Le centre officiel **${medical.name}** est opérationnel à **${medical.description}**.\n\n`;
+      }
+      reply += `Veuillez localiser l'agent de sécurité ou le bénévole le plus proche. Si vous rencontrez une urgence grave, veuillez signaler cet incident immédiatement via notre formulaire **Signaler un Incident**!`;
+    } else if (targetLang === "de") {
+      reply = `### 🚨 NOTFALLMEDIZINISCHE HILFE\n\n`;
+      if (medical) {
+        reply += `🏥 **Soforthilfezentrum:** Das offizielle **${medical.name}** ist in **${medical.description}** einsatzbereit.\n\n`;
+      }
+      reply += `Bitte wenden Sie sich an die nächste Sicherheitskraft oder einen Helfer. Wenn Sie einen akuten Notfall haben, melden Sie dies bitte sofort über unser Formular **Vorfallsbericht** in der Operator-Suite!`;
+    } else if (targetLang === "ar") {
+      reply = `### 🚨 مساعدة طبية طارئة\n\n`;
+      if (medical) {
+        reply += `🏥 **مركز الرعاية الفورية:** المركز الرسمي **${medical.name}** يعمل في **${medical.description}**.\n\n`;
+      }
+      reply += `يرجى تحديد موقع أقرب ضابط أمن أو متطوع. إذا كنت تواجه حالة طوارئ حادة، فيرجى الإبلاغ عن هذا الحادث باستخدام نموذج **الإبلاغ عن حادث** في جناح المشغل على الفور!`;
+    } else if (targetLang === "pt") {
+      reply = `### 🚨 ASSISTÊNCIA MÉDICA DE EMERGÊNCIA\n\n`;
+      if (medical) {
+        reply += `🏥 **Centro de Atendimento Imediato:** O posto oficial **${medical.name}** está operacional em **${medical.description}**.\n\n`;
+      }
+      reply += `Por favor, localize o oficial de segurança ou voluntário mais próximo. Se estiver enfrentando uma emergência grave, relate o incidente imediatamente usando o nosso formulário **Relatar Incidente** na suíte operacional!`;
+    } else {
+      reply = `### 🚨 EMERGENCY MEDICAL ASSISTANCE\n\n`;
+      if (medical) {
+        reply += `🏥 **Immediate Care Center:** The official **${medical.name}** is operational at **${medical.description}**.\n\n`;
+      }
+      reply += `Please locate the nearest security officer or volunteer helper. If you are experiencing an acute emergency, please report this incident using our **Report Incident** form on the live operator suite immediately!`;
+    }
+  } else if (msgLower.includes("match") || msgLower.includes("score") || msgLower.includes("play") || msgLower.includes("partido") || msgLower.includes("match") || msgLower.includes("spiel") || msgLower.includes("مباراة") || msgLower.includes("jogo")) {
+    if (targetLang === "es") {
+      reply = `### Información de la Jornada ⚽\n\n**${stadium.eventName}**\n\n`;
+      stadium.matchSchedule.forEach(m => {
+        reply += `- **${m.teamA} vs ${m.teamB}** (${m.stage})\n`;
+        reply += `  - Estado: \`${m.status}\` ${m.score ? `| Marcador: ${m.score}` : ''}\n`;
+        reply += `  - Horario: ${m.date} a las ${m.time}\n\n`;
+      });
+    } else if (targetLang === "fr") {
+      reply = `### Informations Matchday ⚽\n\n**${stadium.eventName}**\n\n`;
+      stadium.matchSchedule.forEach(m => {
+        reply += `- **${m.teamA} vs ${m.teamB}** (${m.stage})\n`;
+        reply += `  - Statut: \`${m.status}\` ${m.score ? `| Score: ${m.score}` : ''}\n`;
+        reply += `  - Calendrier: ${m.date} à ${m.time}\n\n`;
+      });
+    } else if (targetLang === "de") {
+      reply = `### Spieltagsinformationen ⚽\n\n**${stadium.eventName}**\n\n`;
+      stadium.matchSchedule.forEach(m => {
+        reply += `- **${m.teamA} vs ${m.teamB}** (${m.stage})\n`;
+        reply += `  - Status: \`${m.status}\` ${m.score ? `| Ergebnis: ${m.score}` : ''}\n`;
+        reply += `  - Termine: ${m.date} um ${m.time} Uhr\n\n`;
+      });
+    } else if (targetLang === "ar") {
+      reply = `### معلومات يوم المباراة ⚽\n\n**${stadium.eventName}**\n\n`;
+      stadium.matchSchedule.forEach(m => {
+        reply += `- **${m.teamA} مقابل ${m.teamB}** (${m.stage})\n`;
+        reply += `  - الحالة: \`${m.status}\` ${m.score ? `| النتيجة: ${m.score}` : ''}\n`;
+        reply += `  - الجدول: ${m.date} في ${m.time}\n\n`;
+      });
+    } else if (targetLang === "pt") {
+      reply = `### Informações do Matchday ⚽\n\n**${stadium.eventName}**\n\n`;
+      stadium.matchSchedule.forEach(m => {
+        reply += `- **${m.teamA} vs ${m.teamB}** (${m.stage})\n`;
+        reply += `  - Estado: \`${m.status}\` ${m.score ? `| Placar: ${m.score}` : ''}\n`;
+        reply += `  - Horário: ${m.date} às ${m.time}\n\n`;
+      });
+    } else {
+      reply = `### Matchday Information ⚽\n\n**${stadium.eventName}**\n\n`;
+      stadium.matchSchedule.forEach(m => {
+        reply += `- **${m.teamA} vs ${m.teamB}** (${m.stage})\n`;
+        reply += `  - Status: \`${m.status}\` ${m.score ? `| Score: ${m.score}` : ''}\n`;
+        reply += `  - Schedule: ${m.date} at ${m.time}\n\n`;
+      });
+    }
+  } else {
+    if (targetLang === "es") {
+      reply = `### Respuesta de StadiumGPT\n\n¡Hola! Soy **StadiumGPT**, tu compañero inteligente para la Copa Mundial de la FIFA. Puedo ayudarte con guías en tiempo real sobre puertas, baños, comida, partidos y seguridad en **${stadium.name}**.\n\n¿En qué puedo ayudarte hoy?\n\n*Intenta preguntar:* "¿Qué puerta tiene menos fila?", "Opciones de comida vegetariana" o "¿Dónde está la enfermería?"`;
+    } else if (targetLang === "fr") {
+      reply = `### Réponse de StadiumGPT\n\nBonjour ! Je suis **StadiumGPT**, votre compagnon intelligent pour la Coupe du Monde de la FIFA. Je peux vous aider avec des guides en temps réel sur les portes, les toilettes, les points de restauration, les matchs et la sécurité à **${stadium.name}**.\n\nComment puis-je vous aider aujourd'hui ?\n\n*Essayez de demander:* "Quelle porte a le moins d'attente ?", "Montre-moi les stands végétariens" ou "Où est le centre médical ?"`;
+    } else if (targetLang === "de") {
+      reply = `### StadiumGPT-Antwort\n\nHallo! Ich bin **StadiumGPT**, Ihr intelligenter Begleiter für die FIFA-Weltmeisterschaft. Ich kann Ihnen mit Echtzeit-Führern zu Toren, Toiletten, Imbissen, Spielen und Sicherheitsregeln im **${stadium.name}** helfen.\n\nWie kann ich Ihnen heute helfen?\n\n*Fragen Sie zum Beispiel:* "Welches Tor ist am leersten?", "Zeige mir vegetarische Speisen" oder "Wo ist die Sanitätsstation?"`;
+    } else if (targetLang === "ar") {
+      reply = `### إجابة StadiumGPT\n\nمرحبًا! أنا **StadiumGPT**، رفيقك الذكي في كأس العالم لكرة القدم فيفا. يمكنني مساعدتك بإرشادات في الوقت الفعلي حول البوابات، ودورات المياه، ومناطق الطعام، والمباريات، وقواعد السلامة في **${stadium.name}**.\n\nكيف يمكنني مساعدتك اليوم؟\n\n*جرب أن تسأل:* "أي بوابة هي الأقصر طابورًا؟"، "أرني مأكولات نباتية"، أو "أين يقع المركز الطبي؟"`;
+    } else if (targetLang === "pt") {
+      reply = `### Resposta do StadiumGPT\n\nOlá! Eu sou o **StadiumGPT**, seu companheiro inteligente da Copa do Mundo FIFA. Posso ajudar com guias em tempo real sobre portões, banheiros, alimentação, jogos e segurança no estádio **${stadium.name}**.\n\nComo posso ajudar você hoje?\n\n*Tente perguntar:* "Qual portão está mais vazio?", "Opções de comida vegetariana" ou "Onde fica o centro médico?"`;
+    } else {
+      reply = `### StadiumGPT Response\n\nHello! I am **StadiumGPT**, your intelligent FIFA World Cup companion. I can help you with real-time guides about gates, restrooms, food courts, matches, and safety rules at **${stadium.name}**.\n\nWhat can I assist you with today?\n\n*Try asking:* "Which gate is shortest?", "Show me vegetarian food spots", or "Where is the medical center?"`;
+    }
+  }
+
+  return reply;
+}
 
 
 // 11. AI Decision Support System Endpoint (Produces intelligent operational actions)
@@ -1104,69 +1339,7 @@ app.post("/api/gemini/decision-support", async (req, res) => {
 
   if (!ai) {
     // Robust local fallback rule-based decision support system
-    const recommendations = [];
-
-    // Analyze Gate congestion
-    const congestedGates = stadium.facilities.filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.CONGESTED);
-    const clearGates = stadium.facilities.filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.OPERATIONAL && f.queueLength === QueueLength.SHORT);
-
-    if (congestedGates.length > 0 && clearGates.length > 0) {
-      recommendations.push({
-        id: `rec-crowd-${Date.now()}`,
-        title: "Redirect Crowd Inflow from Congested Gates",
-        category: "CROWD",
-        recommendation: `Redirect incoming fans from ${congestedGates.map(g => g.name).join(", ")} to the clear entries.`,
-        reasoning: `${congestedGates[0].name} has critical wait times (${congestedGates[0].waitTimeMinutes} mins), while ${clearGates[0].name} is operational with only ${clearGates[0].waitTimeMinutes} mins wait.`,
-        confidenceScore: 92,
-        actionTriggered: false,
-        affectedFacilityId: congestedGates[0].id
-      });
-    }
-
-    // Analyze Restrooms
-    const congestedRestrooms = stadium.facilities.filter(f => f.category === FacilityCategory.RESTROOM && f.queueLength === QueueLength.LONG);
-    if (congestedRestrooms.length > 0) {
-      recommendations.push({
-        id: `rec-facility-${Date.now()}`,
-        title: "Deploy Sanitization Crews to South Restrooms",
-        category: "FACILITY",
-        recommendation: "Increase sanitation and service frequency at Section 134 restrooms.",
-        reasoning: "Restroom suite has spiked into CONGESTED status due to nearby match concessions. High volume requires active cleaners.",
-        confidenceScore: 85,
-        actionTriggered: false,
-        affectedFacilityId: congestedRestrooms[0].id
-      });
-    }
-
-    // Analyze Active Incidents
-    const activeMedical = stadium.incidents.filter(i => i.category === "Medical" && i.status !== IncidentStatus.RESOLVED);
-    if (activeMedical.length > 0) {
-      recommendations.push({
-        id: `rec-medical-${Date.now()}`,
-        title: "Dispatch Emergency Medical Team",
-        category: "MEDICAL",
-        recommendation: "Deploy First Aid responders with emergency transport wheels to Seating Section 104.",
-        reasoning: `Active heat exhaustion incident reported by staff. Clinic 1 is currently empty and fully operational. Dispatching immediate treatment.`,
-        confidenceScore: 98,
-        actionTriggered: true,
-        affectedFacilityId: activeMedical[0].facilityId
-      });
-    }
-
-    // Default general recommendation
-    if (recommendations.length === 0) {
-      recommendations.push({
-        id: `rec-gen-${Date.now()}`,
-        title: "Proactive Volunteer Reallocation",
-        category: "CROWD",
-        recommendation: "Station additional volunteer guides near official Fan Merch Shops.",
-        reasoning: "Fan shop queue is building up smoothly. Volunteers will speed up queue division and assist spectators with quick payments.",
-        confidenceScore: 78,
-        actionTriggered: false
-      });
-    }
-
-    res.json(recommendations);
+    res.json(getRuleBasedDecisionSupport(stadium));
     return;
   }
 
@@ -1239,8 +1412,439 @@ Respond ONLY with a JSON array conforming exactly to this structure. Each recomm
     const recommendations = JSON.parse(resText);
     res.json(recommendations);
   } catch (err: any) {
-    console.error("Gemini AI Decision Support Error:", err);
-    res.status(500).json({ error: "Failed to analyze decision support", details: err.message });
+    console.error("Gemini AI Decision Support Error (falling back to rules):", err);
+    res.json(getRuleBasedDecisionSupport(stadium));
+  }
+});
+
+
+// Helper function for local decision support fallback
+function getRuleBasedDecisionSupport(stadium: Stadium) {
+  const recommendations = [];
+
+  // Analyze Gate congestion
+  const congestedGates = stadium.facilities.filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.CONGESTED);
+  const clearGates = stadium.facilities.filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.OPERATIONAL && f.queueLength === QueueLength.SHORT);
+
+  if (congestedGates.length > 0 && clearGates.length > 0) {
+    recommendations.push({
+      id: `rec-crowd-${Date.now()}`,
+      title: "Redirect Crowd Inflow from Congested Gates",
+      category: "CROWD",
+      recommendation: `Redirect incoming fans from ${congestedGates.map(g => g.name).join(", ")} to the clear entries.`,
+      reasoning: `${congestedGates[0].name} has critical wait times (${congestedGates[0].waitTimeMinutes} mins), while ${clearGates[0].name} is operational with only ${clearGates[0].waitTimeMinutes} mins wait.`,
+      confidenceScore: 92,
+      actionTriggered: false,
+      affectedFacilityId: congestedGates[0].id
+    });
+  }
+
+  // Analyze Restrooms
+  const congestedRestrooms = stadium.facilities.filter(f => f.category === FacilityCategory.RESTROOM && f.queueLength === QueueLength.LONG);
+  if (congestedRestrooms.length > 0) {
+    recommendations.push({
+      id: `rec-facility-${Date.now()}`,
+      title: "Deploy Sanitization Crews to South Restrooms",
+      category: "FACILITY",
+      recommendation: "Increase sanitation and service frequency at Section 134 restrooms.",
+      reasoning: "Restroom suite has spiked into CONGESTED status due to nearby match concessions. High volume requires active cleaners.",
+      confidenceScore: 85,
+      actionTriggered: false,
+      affectedFacilityId: congestedRestrooms[0].id
+    });
+  }
+
+  // Analyze Active Incidents
+  const activeMedical = stadium.incidents.filter(i => i.category === "Medical" && i.status !== IncidentStatus.RESOLVED);
+  if (activeMedical.length > 0) {
+    recommendations.push({
+      id: `rec-medical-${Date.now()}`,
+      title: "Dispatch Emergency Medical Team",
+      category: "MEDICAL",
+      recommendation: "Deploy First Aid responders with emergency transport wheels to Seating Section 104.",
+      reasoning: `Active heat exhaustion incident reported by staff. Clinic 1 is currently empty and fully operational. Dispatching immediate treatment.`,
+      confidenceScore: 98,
+      actionTriggered: true,
+      affectedFacilityId: activeMedical[0].facilityId
+    });
+  }
+
+  // Default general recommendation
+  if (recommendations.length === 0) {
+    recommendations.push({
+      id: `rec-gen-${Date.now()}`,
+      title: "Proactive Volunteer Reallocation",
+      category: "CROWD",
+      recommendation: "Station additional volunteer guides near official Fan Merch Shops.",
+      reasoning: "Fan shop queue is building up smoothly. Volunteers will speed up queue division and assist spectators with quick payments.",
+      confidenceScore: 78,
+      actionTriggered: false
+    });
+  }
+
+  return recommendations;
+}
+
+
+// 12. Dynamic Batch Translation API Endpoint (with built-in offline local fallback)
+app.post("/api/translate", async (req, res) => {
+  const { texts, targetLanguage } = req.body;
+  if (!texts || !Array.isArray(texts) || !targetLanguage) {
+    res.status(400).json({ error: "Missing texts array or targetLanguage" });
+    return;
+  }
+
+  const target = targetLanguage.toLowerCase().trim();
+  
+  // If target is English, no translation needed
+  if (target === "en") {
+    res.json({ translatedTexts: texts });
+    return;
+  }
+
+  // Robust, complete fallback offline translation dictionary for all main UI labels
+  const dictionary: Record<string, Record<string, string>> = {
+    es: {
+      "stadium": "estadio",
+      "capacity": "capacidad",
+      "command center": "centro de comando",
+      "active live match ticker": "marcador del partido en vivo",
+      "matchday": "día del partido",
+      "concourse scanners nominal": "escáneres del vestíbulo nominales",
+      "live tweaks": "ajustes en vivo",
+      "crowd": "multitud",
+      "parking %": "% de estacionamiento",
+      "traffic": "tráfico",
+      "weather": "clima",
+      "active bulletins": "boletines activos",
+      "parking lots": "estacionamientos",
+      "interactive map & ai helper": "mapa interactivo y asistente de ia",
+      "predictive analytics": "análisis predictivo",
+      "ai decision support": "soporte de decisiones de ia",
+      "incidents & staff tasks": "incidentes y tareas del personal",
+      "compliance & testing": "cumplimiento y pruebas",
+      "super-admin-global-kpis": "kpis globales del super-administrador",
+      "cross-stadium global orchestration console": "consola de orquestación global multi-estadio",
+      "total venues": "sedes totales",
+      "total combined capacity": "capacidad total combinada",
+      "total active safety incidents": "incidentes activos de seguridad",
+      "global server health": "salud global del servidor",
+      "all venues synced": "todas las sedes sincronizadas",
+      "seats": "asientos",
+      "alerts": "alertas",
+      "nominal": "nominal",
+      "fifa world cup digital venue platform": "plataforma digital de sedes de la copa mundial de la fifa",
+      "authorized operator console": "consola de operador autorizada",
+      "secure session": "sesión segura",
+      "all rights reserved": "todos los derechos reservados",
+      "which gate has the shortest queue?": "¿qué puerta tiene la cola más corta?",
+      "show me where the medical center is.": "muéstrame dónde está el centro médico.",
+      "do you have vegetarian food options?": "¿tienen opciones de comida vegetariana?",
+      "how crowded is the stadium right now?": "¿qué tan lleno está el estadio en este momento?",
+      "what announcements are active?": "¿qué anuncios están activos?",
+      "live now": "en vivo ahora",
+      "Active Bulletins": "boletines activos",
+      "Parking Lots": "estacionamientos",
+      "gis map visualizer": "visualizador de mapa gis",
+      "crowd control": "control de multitudes",
+      "concession stands": "puestos de comida",
+      "restrooms": "baños",
+      "entry gates": "puertas de entrada",
+      "medical clinics": "clínicas médicas",
+      "select facility to command": "seleccionar instalación para comandar",
+      "reporting incident dispatcher": "despachador de reportes de incidentes",
+      "report safety or facility hazard": "reportar peligro de seguridad o instalación",
+      "report incident": "reportar incidente",
+      "staff queue optimizer": "optimizador de colas del personal",
+      "chat with stadiumgpt helper": "chatear con asistente stadiumgpt",
+      "ask anything about gates, concession wait times, restrooms, and security rules": "pregunta lo que quieras sobre puertas, tiempos de comida, baños y seguridad",
+      "type stadium question...": "escribe una pregunta sobre el estadio...",
+      "send": "enviar"
+    },
+    fr: {
+      "stadium": "stade",
+      "capacity": "capacité",
+      "command center": "centre de commandement",
+      "active live match ticker": "téléscripteur de match en direct",
+      "matchday": "jour de match",
+      "concourse scanners nominal": "scanners de hall nominaux",
+      "live tweaks": "ajustements en direct",
+      "crowd": "foule",
+      "parking %": "% de parking",
+      "traffic": "circulation",
+      "weather": "météo",
+      "active bulletins": "bulletins actifs",
+      "parking lots": "parkings",
+      "interactive map & ai helper": "carte interactive et assistant ia",
+      "predictive analytics": "analyses prédictives",
+      "ai decision support": "aide à la décision ia",
+      "incidents & staff tasks": "incidents et tâches du personnel",
+      "compliance & testing": "conformité et tests",
+      "super-admin-global-kpis": "indicateurs globaux de super-admin",
+      "cross-stadium global orchestration console": "console d'orchestration globale multi-stades",
+      "total venues": "total des sites",
+      "total combined capacity": "capacité totale combinée",
+      "total active safety incidents": "incidents de sécurité actifs",
+      "global server health": "santé globale du serveur",
+      "all venues synced": "tous les sites synchronisés",
+      "seats": "sièges",
+      "alerts": "alertes",
+      "nominal": "nominal",
+      "fifa world cup digital venue platform": "plateforme numérique des sites de la coupe du monde de la fifa",
+      "authorized operator console": "console d'opérateur autorisée",
+      "secure session": "session sécurisée",
+      "all rights reserved": "tous droits réservés",
+      "which gate has the shortest queue?": "quelle porte a la file d'attente la plus courte ?",
+      "show me where the medical center is.": "montrez-moi où se trouve le centre médical.",
+      "do you have vegetarian food options?": "avez-vous des options de nourriture végétarienne ?",
+      "how crowded is the stadium right now?": "quel est le taux d'occupation du stade en ce moment ?",
+      "what announcements are active?": "quels messages d'alerte sont actifs ?",
+      "live now": "en direct",
+      "Active Bulletins": "bulletins actifs",
+      "Parking Lots": "parkings",
+      "gis map visualizer": "visualiseur de carte sig",
+      "crowd control": "contrôle des foules",
+      "concession stands": "points de vente",
+      "restrooms": "toilettes",
+      "entry gates": "portes d'entrée",
+      "medical clinics": "cliniques médicales",
+      "select facility to command": "sélectionner l'installation à commander",
+      "reporting incident dispatcher": "répartiteur de rapports d'incidents",
+      "report safety or facility hazard": "signaler un danger ou incident",
+      "report incident": "signaler un incident",
+      "staff queue optimizer": "optimiseur de file d'attente du personnel",
+      "chat with stadiumgpt helper": "discuter avec l'assistant de stade",
+      "ask anything about gates, concession wait times, restrooms, and security rules": "posez vos questions sur les entrées, l'attente, les toilettes et la sécurité",
+      "type stadium question...": "tapez votre question...",
+      "send": "envoyer"
+    },
+    de: {
+      "stadium": "Stadion",
+      "capacity": "Kapazität",
+      "command center": "Kommandozentrale",
+      "active live match ticker": "Live-Spiel-Ticker",
+      "matchday": "Spieltag",
+      "concourse scanners nominal": "Umlauf-Scanner nominal",
+      "live tweaks": "Live-Anpassungen",
+      "crowd": "Menge",
+      "parking %": "Parkplatz %",
+      "traffic": "Verkehr",
+      "weather": "Wetter",
+      "active bulletins": "Aktive Meldungen",
+      "parking lots": "Parkplätze",
+      "interactive map & ai helper": "Interaktive Karte & KI-Helfer",
+      "predictive analytics": "Prädiktive Analysen",
+      "ai decision support": "KI-Entscheidungshilfe",
+      "incidents & staff tasks": "Vorfälle & Personalaufgaben",
+      "compliance & testing": "Compliance & Tests",
+      "super-admin-global-kpis": "Super-Admin Globale KPIs",
+      "cross-stadium global orchestration console": "Globale stadionübergreifende Orchestrierungskonsole",
+      "total venues": "Gesamte Spielorte",
+      "total combined capacity": "Gesamte kombinierte Kapazität",
+      "total active safety incidents": "Aktive Sicherheitsvorfälle",
+      "global server health": "Globale Servergesundheit",
+      "all venues synced": "Alle Spielorte synchronisiert",
+      "seats": "Sitzplätze",
+      "alerts": "Alarme",
+      "nominal": "nominal",
+      "fifa world cup digital venue platform": "Digitale FIFA WM-Spielort-Plattform",
+      "authorized operator console": "Autorisierte Bedienerkonsole",
+      "secure session": "Sichere Sitzung",
+      "all rights reserved": "Alle Rechte vorbehalten",
+      "which gate has the shortest queue?": "Welches Tor hat die kürzeste Schlange?",
+      "show me where the medical center is.": "Zeig mir, wo das medizinische Zentrum ist.",
+      "do you have vegetarian food options?": "Gibt es vegetarische Essensoptionen?",
+      "how crowded is the stadium right now?": "Wie voll ist das Stadion gerade?",
+      "what announcements are active?": "Welche Durchsagen sind aktiv?",
+      "live now": "Live Jetzt",
+      "Active Bulletins": "Aktive Bulletins",
+      "Parking Lots": "Parkplätze",
+      "gis map visualizer": "GIS-Karten-Visualisierer",
+      "crowd control": "Mengensteuerung",
+      "concession stands": "Verkaufsstände",
+      "restrooms": "Toiletten",
+      "entry gates": "Eingangstore",
+      "medical clinics": "Medizinische Kliniken",
+      "select facility to command": "Anlage zur Steuerung auswählen",
+      "reporting incident dispatcher": "Incident Report Dispatcher",
+      "report safety or facility hazard": "Sicherheits- oder Anlagenrisiko melden",
+      "report incident": "Vorfall melden",
+      "staff queue optimizer": "Personal Schlangen-Optimierer",
+      "chat with stadiumgpt helper": "Chat mit StadiumGPT-Helfer",
+      "ask anything about gates, concession wait times, restrooms, and security rules": "Fragen Sie alles zu Toren, Wartezeiten, Toiletten und Regeln",
+      "type stadium question...": "Stadion-Frage eingeben...",
+      "send": "Senden"
+    },
+    ar: {
+      "stadium": "الملعب",
+      "capacity": "السعة",
+      "command center": "مركز القيادة",
+      "active live match ticker": "شريط المباراة المباشرة",
+      "matchday": "يوم المباراة",
+      "concourse scanners nominal": "أجهزة المسح الضوئي طبيعية",
+      "live tweaks": "تعديلات مباشرة",
+      "crowd": "الجمهور",
+      "parking %": "نسبة مواقف السيارات",
+      "traffic": "حركة المرور",
+      "weather": "الطقس",
+      "active bulletins": "النشرات النشطة",
+      "parking lots": "مواقف السيارات",
+      "interactive map & ai helper": "الخريطة التفاعلية ومساعد الذكاء الاصطناعي",
+      "predictive analytics": "التحليلات التنبؤية",
+      "ai decision support": "دعم القرار بالذكاء الاصطناعي",
+      "incidents & staff tasks": "الحوادث ومهام الموظفين",
+      "compliance & testing": "الامتثال والاختبار",
+      "super-admin-global-kpis": "مؤشرات الأداء العالمية للمسؤول الفائق",
+      "cross-stadium global orchestration console": "لوحة التحكم العالمية للتنسيق بين الملاعب",
+      "total venues": "إجمالي الملاعب",
+      "total combined capacity": "السعة الإجمالية المشتركة",
+      "total active safety incidents": "حوادث السلامة النشطة",
+      "global server health": "صحة الخادم العالمية",
+      "all venues synced": "مزامنة جميع الملاعب",
+      "seats": "مقاعد",
+      "alerts": "تنبيهات",
+      "nominal": "طبيعي",
+      "fifa world cup digital venue platform": "المنصة الرقمية لملاعب كأس العالم فيفا",
+      "authorized operator console": "لوحة تحكم المشغل المعتمد",
+      "secure session": "جلسة آمنة",
+      "all rights reserved": "جميع الحقوق محفوظة",
+      "which gate has the shortest queue?": "أي بوابة بها أقصر طابور؟",
+      "show me where the medical center is.": "أرني أين يقع المركز الطبي.",
+      "do you have vegetarian food options?": "هل لديكم خيارات طعام نباتي؟",
+      "how crowded is the stadium right now?": "ما مدى ازدحام الاستاد الآن؟",
+      "what announcements are active?": "ما هي الإعلانات النشطة؟",
+      "live now": "مباشر الآن",
+      "Active Bulletins": "النشرات النشطة",
+      "Parking Lots": "مواقف السيارات",
+      "gis map visualizer": "مستعرض خرائط نظم المعلومات الجغرافية GIS",
+      "crowd control": "التحكم في الحشود",
+      "concession stands": "أكشاك البيع",
+      "restrooms": "دورات المياه",
+      "entry gates": "بوابات الدخول",
+      "medical clinics": "العيادات الطبية",
+      "select facility to command": "اختر المنشأة للتحكم بها",
+      "reporting incident dispatcher": "مراسل بلاغات الحوادث",
+      "report safety or facility hazard": "أبلغ عن خطر أمني أو عيب منشآت",
+      "report incident": "أبلغ عن حادث",
+      "staff queue optimizer": "محسن طوابير الموظفين",
+      "chat with stadiumgpt helper": "تحدث مع مساعد StadiumGPT",
+      "ask anything about gates, concession wait times, restrooms, and security rules": "اسأل عن البوابات، أوقات الانتظار، دورات المياه، وقواعد الأمن",
+      "type stadium question...": "اكتب سؤالك عن الملعب...",
+      "send": "إرسال"
+    },
+    pt: {
+      "stadium": "estádio",
+      "capacity": "capacidade",
+      "command center": "centro de comando",
+      "active live match ticker": "placar do jogo ao vivo",
+      "matchday": "dia do jogo",
+      "concourse scanners nominal": "scanners do saguão nominais",
+      "live tweaks": "ajustes ao vivo",
+      "crowd": "multidão",
+      "parking %": "% de estacionamento",
+      "traffic": "trânsito",
+      "weather": "clima",
+      "active bulletins": "boletins ativos",
+      "parking lots": "estacionamentos",
+      "interactive map & ai helper": "mapa interativo e assistente de ia",
+      "predictive analytics": "análises preditivas",
+      "ai decision support": "suporte de decisão de ia",
+      "incidents & staff tasks": "incidentes e tarefas da equipe",
+      "compliance & testing": "conformidade e testes",
+      "super-admin-global-kpis": "kpis globais do super-administrador",
+      "cross-stadium global orchestration console": "console de orquestração global multiestádio",
+      "total venues": "total de locais",
+      "total combined capacity": "capacidade combinada total",
+      "total active safety incidents": "incidentes ativos de segurança",
+      "global server health": "saúde global do servidor",
+      "all venues synced": "todos os locais sincronizados",
+      "seats": "assentos",
+      "alerts": "alertas",
+      "nominal": "nominal",
+      "fifa world cup digital venue platform": "plataforma digital de sedes da copa do mundo da fifa",
+      "authorized operator console": "console de operador autorizado",
+      "secure session": "sessão segura",
+      "all rights reserved": "todos os direitos reservados",
+      "which gate has the shortest queue?": "qual portão tem a menor fila?",
+      "show me where the medical center is.": "mostre-me onde fica o centro médico.",
+      "do you have vegetarian food options?": "você tem opções de comida vegetariana?",
+      "how crowded is the stadium right now?": "quão cheio está o estádio agora?",
+      "what announcements are active?": "quais comunicados estão ativos?",
+      "live now": "ao vivo agora",
+      "Active Bulletins": "boletins ativos",
+      "Parking Lots": "estacionamentos",
+      "gis map visualizer": "visualizador de mapa gis",
+      "crowd control": "controle de multidão",
+      "concession stands": "ponto de alimentação",
+      "restrooms": "banheiros",
+      "entry gates": "portões de entrada",
+      "medical clinics": "clínicas médicas",
+      "select facility to command": "selecionar instalação para comandar",
+      "reporting incident dispatcher": "despachador de relatórios de incidentes",
+      "report safety or facility hazard": "relatar perigo de segurança ou instalação",
+      "report incident": "relatar incidente",
+      "staff queue optimizer": "otimizador de filas da equipe",
+      "chat with stadiumgpt helper": "conversar com assistente stadiumgpt",
+      "ask anything about gates, concession wait times, restrooms, and security rules": "pergunte sobre portões, tempos de espera, banheiros e regras",
+      "type stadium question...": "digite sua pergunta...",
+      "send": "enviar"
+    }
+  };
+
+  if (!ai) {
+    // offline replacement of dictionary items
+    const translated = texts.map(text => {
+      const lower = text.toLowerCase().trim();
+      if (dictionary[target] && dictionary[target][lower]) {
+        return dictionary[target][lower];
+      }
+      return text;
+    });
+    res.json({ translatedTexts: translated });
+    return;
+  }
+
+  try {
+    const prompt = `Translate the following list of strings into the specified target language: "${targetLanguage}" (code: "${target}").
+Keep any markdown formatting, numbers, proper names (like StadiumGPT or stadium names), or percents unchanged.
+Return ONLY a valid JSON array of translated strings in the exact same index order. Do not include any markdown block formatting wrapper (no backticks) or explanation.
+
+JSON array to translate:
+${JSON.stringify(texts)}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "Translated strings"
+        },
+        temperature: 0.1
+      }
+    });
+
+    let resText = response.text || "[]";
+    resText = resText.replace(/```json/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(resText);
+    if (Array.isArray(parsed) && parsed.length === texts.length) {
+      res.json({ translatedTexts: parsed });
+    } else {
+      throw new Error("Incorrect parsed response structure");
+    }
+  } catch (err: any) {
+    console.error("Failed to translate dynamically via Gemini:", err);
+    // fallback offline translation mapping
+    const translated = texts.map(text => {
+      const lower = text.toLowerCase().trim();
+      if (dictionary[target] && dictionary[target][lower]) {
+        return dictionary[target][lower];
+      }
+      return text;
+    });
+    res.json({ translatedTexts: translated });
   }
 });
 

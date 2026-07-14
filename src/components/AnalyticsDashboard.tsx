@@ -36,24 +36,30 @@ export default function AnalyticsDashboard({ stadium }: AnalyticsDashboardProps)
   const [metrics, setMetrics] = React.useState<PredictiveMetrics | null>(null);
   const [loading, setLoading] = React.useState(true);
 
-  const fetchPredictiveData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/stadiums/${stadium.id}/predictive`);
-      if (response.ok) {
-        const data = await response.json();
-        setMetrics(data);
-      }
-    } catch (err) {
-      console.error("Error fetching predictive metrics:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   React.useEffect(() => {
+    let active = true;
+    const fetchPredictiveData = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/stadiums/${stadium.id}/predictive`);
+        if (response.ok && active) {
+          const data = await response.json();
+          setMetrics(data);
+        }
+      } catch (err) {
+        console.error("Error fetching predictive metrics:", err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchPredictiveData();
-  }, [stadium]);
+    return () => {
+      active = false;
+    };
+  }, [stadium.id]);
 
   if (loading || !metrics) {
     return (

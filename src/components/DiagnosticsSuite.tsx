@@ -123,13 +123,22 @@ export default function DiagnosticsSuite({ stadium, stadiums, currentUserRole }:
   const [audioFeedback, setAudioFeedback] = React.useState(false);
   const [optimizationLevel, setOptimizationLevel] = React.useState(2); // 1 = Normal, 2 = High (aggressive memo), 3 = Max (reduced animation)
 
+  const isMountedRef = React.useRef(true);
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const addLog = (message: string, category: "INFO" | "SUCCESS" | "WARNING" | "ERROR" = "INFO") => {
+    if (!isMountedRef.current) return;
     const timestamp = new Date().toLocaleTimeString([], { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" });
     setLogs(prev => [...prev, { timestamp, category, message }]);
   };
 
   const speakLog = (text: string) => {
-    if (!audioFeedback || !window.speechSynthesis) return;
+    if (!audioFeedback || !window.speechSynthesis || !isMountedRef.current) return;
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.1;
     window.speechSynthesis.speak(utterance);
@@ -149,6 +158,7 @@ export default function DiagnosticsSuite({ stadium, stadiums, currentUserRole }:
 
     // Staggered execution of test items
     for (let i = 0; i < tests.length; i++) {
+      if (!isMountedRef.current) return;
       const currentTest = tests[i];
       
       setTests(prev => prev.map(t => t.id === currentTest.id ? { ...t, status: "RUNNING" } : t));
@@ -158,8 +168,9 @@ export default function DiagnosticsSuite({ stadium, stadiums, currentUserRole }:
       const duration = Math.floor(Math.random() * 150) + 50;
       await new Promise(resolve => setTimeout(resolve, duration + 100));
 
+      if (!isMountedRef.current) return;
+
       // Determine result & logs specifically for each check
-      let status: "PASS" | "FAIL" = "PASS";
       let logMsg = "";
       let isSuccess = true;
 

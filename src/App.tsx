@@ -24,6 +24,7 @@ import AnalyticsDashboard from "./components/AnalyticsDashboard.js";
 import IncidentTaskCenter from "./components/IncidentTaskCenter.js";
 import StadiumConfigurator from "./components/StadiumConfigurator.js";
 import DiagnosticsSuite from "./components/DiagnosticsSuite.js";
+import { useTranslation, SUPPORTED_LANGUAGES, FIFALanguage } from "./TranslationContext";
 
 import { 
   Bell, 
@@ -44,6 +45,7 @@ import {
 } from "lucide-react";
 
 export default function App() {
+  const { language, setLanguage, t } = useTranslation();
   const [stadiums, setStadiums] = React.useState<Stadium[]>([]);
   const [selectedStadiumId, setSelectedStadiumId] = React.useState<string>("");
   const [currentRole, setCurrentRole] = React.useState<UserRole>(UserRole.FOOTBALL_FAN);
@@ -383,6 +385,22 @@ export default function App() {
 
         {/* Action controls: Stadium selector, Configurator & RBAC Role selection */}
         <div className="flex flex-wrap items-center gap-3 justify-end w-full sm:w-auto">
+          {/* Language Selection Toggle */}
+          <div className="relative flex items-center gap-2 bg-[#14161E] border border-white/10 rounded-xl px-3 py-2.5 focus-within:border-[#C5A059]" id="language-selection-toggle">
+            <Globe className="w-3.5 h-3.5 text-[#C5A059]" />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as FIFALanguage)}
+              className="bg-transparent border-none text-xs font-semibold text-white/80 focus:outline-none cursor-pointer pr-1"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="bg-[#14161E] text-white">
+                  {l.flag} {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Active Stadium Selection Dropdown */}
           <div className="relative" id="stadium-selection-dropdown">
             <select
@@ -412,23 +430,23 @@ export default function App() {
           <MapPin className="w-5 h-5 text-[#C5A059]" />
           <div>
             <h2 className="font-light tracking-wide text-sm text-white flex items-center gap-2">
-              {activeStadium.name} Command Center
+              {activeStadium.name} {t("Command Center")}
               <span className="text-[10px] bg-white/10 text-[#C5A059] border border-[#C5A059]/20 px-2 py-0.5 rounded font-mono font-semibold">
-                CAP: {activeStadium.capacity.toLocaleString()}
+                {t("Capacity").toUpperCase()}: {activeStadium.capacity.toLocaleString()}
               </span>
             </h2>
-            <p className="text-xs text-white/50 font-normal">Located in {activeStadium.address}</p>
+            <p className="text-xs text-white/50 font-normal">{t("Located in")} {activeStadium.address}</p>
           </div>
         </div>
 
         {/* State Controllers for Staff/Organizers vs Read-Only KPI Ticker for Fans */}
         {currentRole === UserRole.STADIUM_ORGANIZER || currentRole === UserRole.SUPER_ADMIN || currentRole === UserRole.STADIUM_STAFF ? (
           <div className="flex flex-wrap items-center gap-4 bg-[#14161E] border border-white/10 p-3 rounded-xl w-full md:w-auto" id="live-staff-controllers">
-            <div className="text-xs font-semibold text-[#C5A059] uppercase tracking-widest mr-2 text-[10px]">Live Tweaks:</div>
+            <div className="text-xs font-semibold text-[#C5A059] uppercase tracking-widest mr-2 text-[10px]">{t("Live Tweaks:")}</div>
             
             {/* Crowd Density Select */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-white/50">Crowd:</span>
+              <span className="text-[10px] text-white/50">{t("Crowd")}:</span>
               <select
                 value={activeStadium.crowdDensity}
                 onChange={(e) => handleUpdateStadiumOps({ crowdDensity: e.target.value as CrowdDensity })}
@@ -443,7 +461,7 @@ export default function App() {
 
             {/* Parking Occupancy Input */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-white/50">Parking %:</span>
+              <span className="text-[10px] text-white/50">{t("Parking %")}:</span>
               <input
                 type="number"
                 min="0"
@@ -456,7 +474,7 @@ export default function App() {
 
             {/* Traffic Status Input */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-white/50">Traffic:</span>
+              <span className="text-[10px] text-white/50">{t("Traffic")}:</span>
               <select
                 value={activeStadium.trafficStatus}
                 onChange={(e) => handleUpdateStadiumOps({ trafficStatus: e.target.value })}
@@ -470,7 +488,7 @@ export default function App() {
 
             {/* Weather Alert */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-white/50">Weather:</span>
+              <span className="text-[10px] text-white/50">{t("Weather")}:</span>
               <input
                 type="text"
                 value={activeStadium.weatherAlert || ""}
@@ -486,7 +504,7 @@ export default function App() {
             <div className="bg-[#14161E] border border-white/10 rounded-xl px-3.5 py-1.5 text-center flex items-center gap-2">
               <Users className="w-4 h-4 text-[#C5A059]" />
               <div className="text-left leading-none">
-                <span className="block text-[8px] text-white/40 font-bold uppercase tracking-wider">Crowd Density</span>
+                <span className="block text-[8px] text-white/40 font-bold uppercase tracking-wider">{t("Crowd")}</span>
                 <span className="font-mono text-xs font-black text-white">{activeStadium.crowdDensity}</span>
               </div>
             </div>
@@ -494,7 +512,7 @@ export default function App() {
             <div className="bg-[#14161E] border border-white/10 rounded-xl px-3.5 py-1.5 text-center flex items-center gap-2">
               <CloudSun className="w-4 h-4 text-[#C5A059]" />
               <div className="text-left leading-none">
-                <span className="block text-[8px] text-white/40 font-bold uppercase tracking-wider">Active Bulletins</span>
+                <span className="block text-[8px] text-white/40 font-bold uppercase tracking-wider">{t("Active Bulletins")}</span>
                 <span className="text-xs font-black text-white truncate max-w-[120px]">
                   {activeStadium.weatherAlert || "No alerts"}
                 </span>
@@ -504,7 +522,7 @@ export default function App() {
             <div className="bg-[#14161E] border border-white/10 rounded-xl px-3.5 py-1.5 text-center flex items-center gap-2">
               <Activity className="w-4 h-4 text-[#C5A059]" />
               <div className="text-left leading-none">
-                <span className="block text-[8px] text-white/40 font-bold uppercase tracking-wider">Parking Lots</span>
+                <span className="block text-[8px] text-white/40 font-bold uppercase tracking-wider">{t("Parking Lots")}</span>
                 <span className="font-mono text-xs font-black text-white">{activeStadium.parkingOccupancy}% load</span>
               </div>
             </div>
@@ -577,7 +595,7 @@ export default function App() {
             }`}
           >
             <Compass className="w-4 h-4" />
-            Interactive Map & AI Helper
+            {t("Interactive Map & AI Helper")}
           </button>
           
           <button
@@ -589,7 +607,7 @@ export default function App() {
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            Predictive Analytics
+            {t("Predictive Analytics")}
           </button>
 
           <button
@@ -601,7 +619,7 @@ export default function App() {
             }`}
           >
             <Bot className="w-4 h-4" />
-            AI Decision Support
+            {t("AI Decision Support")}
           </button>
 
           <button
@@ -613,7 +631,7 @@ export default function App() {
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            Incidents & Staff Tasks
+            {t("Incidents & Staff Tasks")}
           </button>
 
           <button
@@ -628,7 +646,7 @@ export default function App() {
             aria-selected={activeTab === "TESTING"}
           >
             <CheckCircle className="w-4 h-4" />
-            Compliance & Testing
+            {t("Compliance & Testing")}
           </button>
         </div>
 
