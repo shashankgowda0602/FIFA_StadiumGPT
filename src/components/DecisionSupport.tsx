@@ -17,6 +17,7 @@ import {
   RefreshCw 
 } from "lucide-react";
 import { useTranslation } from "../TranslationContext";
+import { StadiumGptLogo } from "./StadiumGptLogo.js";
 
 interface DecisionSupportProps {
   stadium: Stadium;
@@ -102,7 +103,7 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4 mb-4">
         <div>
           <h3 className="font-semibold text-white flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-[#C5A059] animate-pulse" />
+            <StadiumGptLogo size={24} className="shadow-[0_0_10px_rgba(197,160,89,0.3)]" />
             {t("stadiumgpt cognitive decision support")}
           </h3>
           <p className="text-xs text-white/50">{t("proactive tournament orchestration models powered by google gemini")}</p>

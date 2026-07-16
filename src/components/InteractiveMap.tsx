@@ -40,7 +40,7 @@ const getCategoryColor = (category: FacilityCategory) => {
   switch (category) {
     case FacilityCategory.ENTRY_GATE:
     case FacilityCategory.EXIT_GATE:
-      return "bg-indigo-500 text-white";
+      return "bg-[#2A4DF5] text-white font-bold";
     case FacilityCategory.RESTROOM:
       return "bg-blue-500 text-white";
     case FacilityCategory.FOOD_COURT:
@@ -434,12 +434,12 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
       <div className="space-y-6 lg:col-span-1" id="map-controls-panel">
         <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white flex items-center gap-2">
+            <h3 className="font-sans font-bold text-white flex items-center gap-2 text-sm uppercase tracking-wide">
               <Compass className="w-5 h-5 text-[#C5A059]" />
-              {t("gis stadium directory")}
+              GIS Stadium Directory
             </h3>
-            <span className="text-[10px] bg-white/5 border border-white/10 text-[#C5A059] px-2 py-0.5 rounded font-semibold font-mono">
-              {stadium.facilities.length} {t("assets").toUpperCase()}
+            <span className="text-[10px] bg-black/50 border border-white/[0.08] text-[#C5A059] px-2.5 py-1 rounded font-bold font-mono tracking-wider">
+              {stadium.facilities.length} ASSETS
             </span>
           </div>
  
@@ -448,15 +448,34 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
             <Search className="absolute left-3.5 top-3 w-4 h-4 text-white/40" />
             <input
               type="text"
-              placeholder={t("search gates, restrooms, food courts...")}
+              placeholder="Search gates, restrooms, food courts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-black border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#C5A059]/50 transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-[#0E1015] border border-white/[0.06] rounded-lg text-white text-xs placeholder-white/30 focus:outline-none focus:border-[#C5A059]/50 transition-colors"
             />
           </div>
  
-          {/* Category Quick Filters */}
-          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1" id="category-filter-scroll">
+          {/* Category Quick Filters - Dropdown for Mobile/Tablet */}
+          <div className="block sm:hidden mb-4">
+            <label htmlFor="asset-category-select" className="block text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1.5 font-mono">
+              Filter Category
+            </label>
+            <select
+              id="asset-category-select"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059]"
+            >
+              <option value="ALL">🔍 {t("all assets")}</option>
+              <option value={FacilityCategory.ENTRY_GATE}>🚪 {t("gates")}</option>
+              <option value={FacilityCategory.FOOD_COURT}>🍔 {t("food courts")}</option>
+              <option value={FacilityCategory.RESTROOM}>🚻 {t("restrooms")}</option>
+              <option value={FacilityCategory.MEDICAL_CENTER}>🏥 {t("medical centers")}</option>
+            </select>
+          </div>
+
+          {/* Category Quick Filters - Classic Horizontal Row for Larger Screens */}
+          <div className="hidden sm:flex items-center gap-2 mb-4 overflow-x-auto pb-1" id="category-filter-scroll">
             <button
               onClick={() => setFilterCategory("ALL")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border ${
@@ -558,23 +577,20 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
         </div>
  
         {/* Live Navigation Assistant Drawer */}
-        <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl animate-pulse-gold">
-          <h4 className="font-semibold text-white flex items-center gap-2 mb-1.5 text-sm">
+        <div className="bg-[#14161E]/90 border border-white/10 rounded-xl p-5 backdrop-blur-md shadow-xl">
+          <h4 className="font-sans font-bold text-white flex items-center gap-2 mb-4 text-sm uppercase tracking-wide">
             <Navigation className="w-4 h-4 text-[#C5A059]" />
-            Live Navigation & Crowd Router
+            Simulate Route & Transit Time
           </h4>
-          <p className="text-[10.5px] text-white/50 mb-4 leading-relaxed font-normal">
-            Select a custom starting and ending location to compute real-time concourse routes avoiding crowd overflows.
-          </p>
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Starting Point</label>
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1.5 font-mono">STARTING POINT</label>
               <select
                 value={navigationStart}
                 onChange={(e) => setNavigationStart(e.target.value)}
-                className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059]"
+                className="w-full px-3 py-2.5 bg-[#0E1015] border border-white/[0.06] rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059] font-sans"
               >
-                <option value="">-- Choose Any Location --</option>
+                <option value="">-- Choose Gate / Entry --</option>
                 {Object.entries(groupedFacilities).map(([category, list]) => (
                   <optgroup key={category} label={category.replace(/_/g, " ")} className="bg-[#14161E] text-[#C5A059]">
                     {(list as Facility[]).map(f => (
@@ -588,13 +604,13 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
             </div>
  
             <div>
-              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Destination Facility</label>
+              <label className="block text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1.5 font-mono">DESTINATION</label>
               <select
                 value={navigationEnd}
                 onChange={(e) => setNavigationEnd(e.target.value)}
-                className="w-full px-3 py-2 bg-black border border-white/10 rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059]"
+                className="w-full px-3 py-2.5 bg-[#0E1015] border border-white/[0.06] rounded-lg text-white/80 text-xs focus:outline-none focus:border-[#C5A059] font-sans"
               >
-                <option value="">-- Choose Any Location --</option>
+                <option value="">-- Choose Gate / Entry --</option>
                 {Object.entries(groupedFacilities).map(([category, list]) => (
                   <optgroup key={category} label={category.replace(/_/g, " ")} className="bg-[#14161E] text-[#C5A059]">
                     {(list as Facility[]).map(f => (
@@ -610,7 +626,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
             <button
               onClick={handleCalculateNavigation}
               disabled={!navigationStart || !navigationEnd}
-              className="w-full flex items-center justify-center gap-2 py-2 bg-[#C5A059] hover:bg-[#D8B775] disabled:bg-white/5 disabled:text-white/20 text-black rounded-lg font-semibold text-xs transition-all cursor-pointer shadow-lg shadow-[#C5A059]/10"
+              className="w-full flex items-center justify-center gap-2 py-2 bg-[#C5A059] hover:bg-[#D8B775] disabled:bg-white/5 disabled:text-white/20 text-black rounded-lg font-bold text-xs transition-all cursor-pointer shadow-lg shadow-[#C5A059]/10"
             >
               <Sparkles className="w-3.5 h-3.5" />
               Force Recalculate Route
@@ -730,7 +746,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
           {/* Map Header */}
           <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
             <div>
-              <h3 className="font-semibold text-white flex items-center gap-2">
+              <h3 className="font-sans font-bold text-white flex items-center gap-2 text-sm uppercase tracking-wide">
                 <Layers className="w-5 h-5 text-[#C5A059]" />
                 {stadium.name} Layout Plan
               </h3>
@@ -744,9 +760,9 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-black border border-white/10 rounded-lg">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#14161E] border border-[#C5A059]/30 rounded-full">
                 <span className="w-2 h-2 rounded-full bg-[#C5A059] animate-pulse" />
-                <span className="text-[10px] font-mono text-white/40">LIVE FEED</span>
+                <span className="text-[9px] font-bold font-mono text-[#C5A059] tracking-widest">LIVE FEED</span>
               </div>
             </div>
           </div>
@@ -865,14 +881,18 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                     {fac.category === FacilityCategory.ENTRY_GATE && (
                       <text 
                         x={fac.longitude} 
-                        y={fac.latitude - 3.2} 
+                        y={fac.latitude - 3.8} 
                         fill="#94a3b8" 
-                        fontSize="2.4" 
+                        fontSize="2.0" 
                         textAnchor="middle" 
                         fontWeight="bold"
                         className="font-mono select-none"
                       >
-                        {fac.name.split(" Gate ")[1] || fac.name.charAt(fac.name.length - 1)}
+                        {fac.id === "nj-gate-a" ? "A (North Entrance)" :
+                         fac.id === "nj-gate-b" ? "B (East Entrance)" :
+                         fac.id === "nj-gate-c" ? "C (South Entrance)" :
+                         fac.id === "nj-gate-d" ? "D (West Entrance)" :
+                         fac.name.replace("Welcome Gate ", "").replace("Verizon Gate ", "").replace("MetLife Gate ", "").replace("Pepsi Gate ", "")}
                       </text>
                     )}
                   </g>

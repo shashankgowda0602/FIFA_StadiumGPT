@@ -19,6 +19,7 @@ import {
   Maximize2 
 } from "lucide-react";
 import { useTranslation } from "../TranslationContext";
+import { StadiumGptLogo } from "./StadiumGptLogo.js";
 
 // Suggested questions based on context
 const SUGGESTED_PROMPTS = [
@@ -46,14 +47,14 @@ export default function Chatbot({ stadium }: ChatbotProps) {
 
   // Auto-load welcome message
   React.useEffect(() => {
-    const title = t("Chat with StadiumGPT Helper");
-    const desc = t("Ask anything about gates, concession wait times, restrooms, and security rules");
+    const activeStadiumName = stadium.name;
+    const activeStadiumLocation = stadium.address;
     setMessages([
       {
         id: "welcome",
         sender: "ai",
-        text: `### ${title} ⚽\n\n${t("Ask anything about gates, concession wait times, restrooms, and security rules")}.\n\n*${t("How can I assist your matchday experience today?")}*`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        text: `for **${activeStadiumName}** in ${activeStadiumLocation}.\n\nI have access to real-time gate wait times, medical stations, parking status, and active emergency bulletins.\n\n*How can I assist your matchday experience today?*`,
+        timestamp: "06:29 PM",
         suggestedPrompts: SUGGESTED_PROMPTS
       }
     ]);
@@ -272,16 +273,12 @@ export default function Chatbot({ stadium }: ChatbotProps) {
       {/* Chat header */}
       <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <img
-            src="/src/assets/images/robot_gold_logo_1784202911119.jpg"
-            alt="StadiumGPT Logo"
-            className="w-9 h-9 rounded-xl object-cover border border-[#C5A059]/30 shadow-lg"
-            referrerPolicy="no-referrer"
-          />
+          {/* Original vector gold/robot logo as seen before */}
+          <StadiumGptLogo size={42} className="shadow-[0_0_15px_rgba(197,160,89,0.25)]" />
           <div>
-            <h3 className="font-semibold text-white flex items-center gap-1.5 text-sm">
+            <h3 className="font-sans font-bold text-white flex items-center gap-1.5 text-sm uppercase tracking-wide">
               StadiumGPT
-              <span className="text-[9px] bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/20 px-1.5 py-0.5 rounded-full font-bold">RAG ENGINE</span>
+              <span className="text-[9px] bg-black/50 text-[#C5A059] border border-[#C5A059]/35 px-1.5 py-0.5 rounded-md font-mono font-bold tracking-wider">RAG ENGINE</span>
             </h3>
             <p className="text-[10px] text-white/40">Intelligent Tournament & Fan Companion</p>
           </div>
@@ -307,7 +304,7 @@ export default function Chatbot({ stadium }: ChatbotProps) {
       </div>
 
       {/* Messages Scroll Box */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-4 mb-4" id="chat-messages-box">
+      <div className="flex-1 overflow-y-auto pr-1 space-y-4 mb-4 font-sans" id="chat-messages-box">
         {messages.map((msg) => {
           const isAi = msg.sender === "ai";
           return (
@@ -317,17 +314,14 @@ export default function Chatbot({ stadium }: ChatbotProps) {
               id={`chat-msg-${msg.id}`}
             >
               {isAi && (
-                <img
-                  src="/src/assets/images/robot_gold_logo_1784202911119.jpg"
-                  alt="AI Avatar"
-                  className="w-7 h-7 rounded-lg object-cover border border-[#C5A059]/20 font-bold shrink-0"
-                  referrerPolicy="no-referrer"
-                />
+                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#C5A059] text-black shrink-0 shadow-md">
+                  <Bot className="w-4 h-4" strokeWidth={2.5} />
+                </div>
               )}
-              <div className="max-w-[85%] flex flex-col gap-1">
+              <div className="max-w-[85%] flex flex-col gap-1 w-full">
                 <div className={`p-3.5 rounded-xl text-xs shadow-md ${
                   isAi 
-                    ? "bg-black border border-white/10 text-white rounded-tl-none" 
+                    ? "bg-[#0E1015] border border-white/[0.06] text-white rounded-tl-none font-medium leading-relaxed" 
                     : "bg-[#C5A059] text-black font-semibold rounded-tr-none shadow-[#C5A059]/5"
                 }`}>
                   {isAi ? renderMarkdownText(msg.text) : <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
@@ -338,18 +332,18 @@ export default function Chatbot({ stadium }: ChatbotProps) {
                   {msg.timestamp}
                 </span>
 
-                {/* Suggestions nested in welcome block */}
+                {/* Suggestions nested in welcome block - Rendered as beautiful vertical full-width list like the image */}
                 {isAi && msg.suggestedPrompts && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5" id="chat-quick-suggestions">
+                  <div className="mt-4 flex flex-col gap-2" id="chat-quick-suggestions">
                     {msg.suggestedPrompts.map((prompt, pidx) => (
                       <button
                         key={pidx}
                         id={`suggestion-tag-${pidx}`}
                         onClick={() => handleSendMessage(prompt)}
-                        className="text-[10px] bg-black border border-white/10 hover:border-[#C5A059]/50 hover:bg-white/5 text-white/80 px-2.5 py-1.5 rounded-lg transition-colors text-left font-semibold cursor-pointer"
+                        className="w-full flex items-center justify-between text-[11px] bg-[#0E1015] border border-white/[0.06] hover:border-[#C5A059]/40 hover:bg-white/[0.02] text-white/90 px-3 py-2 rounded-lg transition-all text-left font-semibold cursor-pointer group"
                       >
-                        {prompt}
-                        <ArrowRight className="w-2.5 h-2.5 inline-block ml-1 text-[#C5A059]" />
+                        <span className="truncate">{prompt}</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#C5A059] shrink-0 ml-2 group-hover:translate-x-0.5 transition-transform" />
                       </button>
                     ))}
                   </div>
@@ -367,9 +361,9 @@ export default function Chatbot({ stadium }: ChatbotProps) {
         {/* Typing indicator */}
         {isLoading && (
           <div className="flex items-center gap-3 justify-start" id="chat-typing-indicator">
-            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 font-bold shrink-0 text-xs">
-              AI
-            </span>
+            <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#C5A059] text-black shrink-0 shadow-md">
+              <Bot className="w-4 h-4" strokeWidth={2.5} />
+            </div>
             <div className="p-3.5 bg-black border border-white/10 rounded-xl rounded-tl-none flex items-center gap-1">
               <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce [animation-delay:-0.3s]" />
               <span className="w-1.5 h-1.5 bg-[#C5A059] rounded-full animate-bounce [animation-delay:-0.15s]" />

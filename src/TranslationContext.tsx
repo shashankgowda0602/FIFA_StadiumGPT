@@ -99,7 +99,9 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "executed": "Ejecutado",
     "deploy action": "Desplegar acción",
     "available to stadium organizers & staff only": "Disponible solo para organizadores y personal del estadio",
-    "activate recommendation": "Activar recomendación"
+    "activate recommendation": "Activar recomendación",
+    "navigate module": "Navegar módulo",
+    "swipe left or right on the screen to switch tabs easily!": "¡Desliza a la izquierda o derecha en la pantalla para cambiar de pestaña fácilmente!"
   },
   fr: {
     "Stadium": "Stade",
@@ -180,7 +182,9 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "executed": "Exécuté",
     "deploy action": "Déployer l'action",
     "available to stadium organizers & staff only": "Disponible uniquement pour les organisateurs et le personnel du stade",
-    "activate recommendation": "Activer la recommandation"
+    "activate recommendation": "Activer la recommandation",
+    "navigate module": "Naviguer dans le module",
+    "swipe left or right on the screen to switch tabs easily!": "Glissez vers la gauche ou la droite sur l'écran pour changer d'onglet facilement!"
   },
   de: {
     "Stadium": "Stadion",
@@ -261,7 +265,9 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "executed": "Ausgeführt",
     "deploy action": "Aktion bereitstellen",
     "available to stadium organizers & staff only": "Nur für Stadionorganisatoren und Personal verfügbar",
-    "activate recommendation": "Empfehlung aktivieren"
+    "activate recommendation": "Empfehlung aktivieren",
+    "navigate module": "Modul navigieren",
+    "swipe left or right on the screen to switch tabs easily!": "Wischen Sie nach links oder rechts auf dem Bildschirm, um die Tabs einfach zu wechseln!"
   },
   ar: {
     "Stadium": "الملعب",
@@ -342,7 +348,9 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "executed": "تم التنفيذ",
     "deploy action": "نشر الإجراء",
     "available to stadium organizers & staff only": "متاح لمنظمي وموظفي الملعب فقط",
-    "activate recommendation": "تفعيل التوصية"
+    "activate recommendation": "تفعيل التوصية",
+    "navigate module": "تنقل في الوحدة",
+    "swipe left or right on the screen to switch tabs easily!": "اسحب ليسارًا أو يمينًا على الشاشة للتبديل بين علامات التبويب بسهولة!"
   },
   pt: {
     "Stadium": "Estádio",
@@ -423,7 +431,9 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "executed": "Executado",
     "deploy action": "Implantar Ação",
     "available to stadium organizers & staff only": "Disponível apenas para organizadores e equipe do estádio",
-    "activate recommendation": "Ativar recomendação"
+    "activate recommendation": "Ativar recomendação",
+    "navigate module": "Navegar no módulo",
+    "swipe left or right on the screen to switch tabs easily!": "Deslize para a esquerda ou direita na tela para alternar as abas facilmente!"
   },
 };
 

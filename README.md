@@ -87,40 +87,6 @@ Spins up the compiled application:
 npm run start
 ```
 
-
-
-### Real-Time Operations Flow
-┌─────────────────────────────────────────────────────────────────┐
-│  OPERATOR UPDATES STADIUM STATE (Crowd Density, Weather, etc.)  │
-└────────────────────┬────────────────────────────────────────────┘
-                     │
-                     ↓
-         ┌───────────────────────┐
-         │  API: PUT /stadiums   │
-         │  {crowdDensity: HIGH} │
-         └───────────┬───────────┘
-                     │
-                     ↓
-    ┌────────────────────────────────────┐
-    │ Express Server: Validates & Updates│
-    │ In-memory Stadium State            │
-    └────────────┬───────────────────────┘
-                 │
-                 ↓
-    ┌─────────────────────────────────────┐
-    │ Recalculates walk times, queues,    │
-    │ triggers predictive models          │
-    └────────────┬────────────────────────┘
-                 │
-                 ↓
-    ┌──────────────────────────────────────┐
-    │ Frontend receives state update,      │
-    │ re-renders map, analytics, alerts    │
-    │ Notification feed updated            │
-    └──────────────────────────────────────┘
-
-
-
-
 ---
+
 *StadiumGPT OS • Authorized Operator Console • Secure Session • FIFA World Cup Digital Venue Platform*

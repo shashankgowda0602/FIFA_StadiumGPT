@@ -24,6 +24,7 @@ import AnalyticsDashboard from "./components/AnalyticsDashboard.js";
 import IncidentTaskCenter from "./components/IncidentTaskCenter.js";
 import StadiumConfigurator from "./components/StadiumConfigurator.js";
 import DiagnosticsSuite from "./components/DiagnosticsSuite.js";
+import { StadiumGptLogo } from "./components/StadiumGptLogo.js";
 import { useTranslation, SUPPORTED_LANGUAGES, FIFALanguage } from "./TranslationContext";
 
 import { 
@@ -41,7 +42,9 @@ import {
   Calendar,
   CloudSun,
   Flame,
-  Globe
+  Globe,
+  Cpu,
+  Shield
 } from "lucide-react";
 
 export default function App() {
@@ -49,8 +52,46 @@ export default function App() {
   const [stadiums, setStadiums] = React.useState<Stadium[]>([]);
   const [selectedStadiumId, setSelectedStadiumId] = React.useState<string>("");
   const [currentRole, setCurrentRole] = React.useState<UserRole>(UserRole.FOOTBALL_FAN);
-  const [activeTab, setActiveTab] = React.useState<"MAP" | "ANALYTICS" | "DECISION" | "SAFETY" | "TESTING">("MAP");
+  const [activeTab, setActiveTab] = React.useState<"MAP" | "ANALYTICS" | "DECISION" | "SAFETY">("MAP");
   const [loading, setLoading] = React.useState(true);
+
+  // Touch Gesture Swiping handlers for dynamic mobile/tablet experience
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const diffX = e.changedTouches[0].clientX - touchStartX.current;
+    const diffY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Detect horizontal swipes mainly
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      if (Math.abs(diffX) > 60) { // Swipe threshold in pixels
+        const tabs: ("MAP" | "ANALYTICS" | "DECISION" | "SAFETY")[] = [
+          "MAP", "ANALYTICS", "DECISION", "SAFETY"
+        ];
+        const currentIndex = tabs.indexOf(activeTab);
+        if (diffX > 0) {
+          // Swipe Right -> Select Previous Tab
+          const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+          setActiveTab(tabs[prevIndex]);
+          addNotification(`Swiped back to ${tabs[prevIndex]} view`, "info");
+        } else {
+          // Swipe Left -> Select Next Tab
+          const nextIndex = (currentIndex + 1) % tabs.length;
+          setActiveTab(tabs[nextIndex]);
+          addNotification(`Swiped forward to ${tabs[nextIndex]} view`, "info");
+        }
+      }
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   // Platform Notification Feed State
   const [notifications, setNotifications] = React.useState<{ id: string; text: string; type: "info" | "warning" | "success" }[]>([]);
@@ -343,89 +384,171 @@ export default function App() {
   const activeLiveMatch = activeStadium.matchSchedule.find(m => m.status === "LIVE");
 
   return (
-    <div className="min-h-screen bg-[#08090C] text-[#E0E2E6] flex flex-col font-sans relative overflow-hidden">
+    <div 
+      className="min-h-screen bg-[#08090C] text-[#E0E2E6] flex flex-col font-sans relative overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Visual Ambient glow backgrounds */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#C5A059]/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-[#C5A059]/5 blur-[120px] pointer-events-none" />
 
       {/* 1. TOURNAMENT TICKER HEADER */}
-      <header className="bg-[#111216]/80 border-b border-white/10 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row gap-4 items-center justify-between" id="stadium-gpt-navbar">
-        {/* Logo & Match Ticker */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <div className="flex items-center gap-3">
-            <img
-              src="/src/assets/images/robot_gold_logo_1784202911119.jpg"
-              alt="StadiumGPT Logo"
-              className="w-8 h-8 rounded-lg object-cover border border-[#C5A059]/30 shadow-[0_0_15px_rgba(197,160,89,0.3)]"
-              referrerPolicy="no-referrer"
-            />
-            <div className="text-left">
-              <h1 className="font-light tracking-[0.2em] uppercase text-white text-base leading-none">
-                Stadium<span className="font-bold text-[#C5A059]">GPT</span>
-                <span className="text-[9px] bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 px-1.5 py-0.5 rounded ml-2 font-mono tracking-widest font-semibold">OS</span>
-              </h1>
-              <span className="text-[8px] text-white/40 uppercase tracking-widest font-semibold leading-none mt-1 block">FIFA World Cup</span>
+      <header className="bg-[#111216]/95 border-b border-white/10 backdrop-blur-md sticky top-0 z-40 flex flex-col" id="stadium-gpt-navbar">
+        {/* Top Row: Brand & Controls */}
+        <div className="px-4 sm:px-6 py-3.5 flex flex-col lg:flex-row gap-4 items-center justify-between border-b border-white/5">
+          {/* Logo & Match Ticker */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto justify-between lg:justify-start">
+            <div className="flex items-center gap-3">
+              {/* Original vector gold/robot logo as seen before */}
+              <StadiumGptLogo size={42} className="shadow-[0_0_15px_rgba(197,160,89,0.25)]" />
+              <div className="text-left">
+                <h1 className="font-sans font-bold tracking-[0.12em] uppercase text-white text-base leading-none flex items-center gap-1.5">
+                  STADIUM<span className="text-[#C5A059]">GPT</span>
+                  <span className="text-[9px] bg-black/50 text-[#C5A059] border border-[#C5A059]/35 px-1.5 py-0.5 rounded-md font-mono font-bold tracking-wider">OS</span>
+                </h1>
+                <span className="text-[9px] text-white/40 uppercase tracking-[0.15em] font-mono font-bold leading-none mt-1.5 block">FIFA WORLD CUP 2026</span>
+              </div>
             </div>
+
+            {/* Active Live Match Ticker */}
+            {activeLiveMatch ? (
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full shrink-0" id="live-match-banner">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-red-400 font-mono tracking-wide">
+                  LIVE NOW: {activeLiveMatch.teamA} {activeLiveMatch.score} {activeLiveMatch.teamB} ({activeLiveMatch.stage})
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-3 py-1 bg-[#14161E] border border-white/10 rounded-full" id="matchday-banner">
+                <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
+                <span className="text-[10px] font-bold text-white/60 font-mono tracking-wide">
+                  MATCHDAY 11 • CONCOURSE SCANNERS NOMINAL
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Active Live Match Ticker */}
-          {activeLiveMatch ? (
-            <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full shrink-0" id="live-match-banner">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-red-400 font-mono tracking-wide">
-                LIVE NOW: {activeLiveMatch.teamA} {activeLiveMatch.score} {activeLiveMatch.teamB} ({activeLiveMatch.stage})
-              </span>
+          {/* Action controls: Stadium selector, Configurator & RBAC Role selection */}
+          <div className="flex flex-wrap items-center gap-3 justify-end w-full lg:w-auto">
+            {/* Language Selection Toggle */}
+            <div className="relative flex items-center gap-2 bg-[#14161E] border border-white/10 rounded-xl px-3 py-2.5 focus-within:border-[#C5A059]" id="language-selection-toggle">
+              <Globe className="w-3.5 h-3.5 text-[#C5A059]" />
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as FIFALanguage)}
+                className="bg-transparent border-none text-xs font-semibold text-white/80 focus:outline-none cursor-pointer pr-1"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code} className="bg-[#14161E] text-white">
+                    {l.flag} {l.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-1 bg-[#14161E] border border-white/10 rounded-full" id="matchday-banner">
-              <Calendar className="w-3.5 h-3.5 text-[#C5A059]" />
-              <span className="text-[10px] font-bold text-white/60 font-mono tracking-wide">
-                MATCHDAY 11 • CONCOURSE SCANNERS NOMINAL
-              </span>
+
+            {/* Active Stadium Selection Dropdown */}
+            <div className="relative" id="stadium-selection-dropdown">
+              <select
+                value={selectedStadiumId}
+                onChange={(e) => setSelectedStadiumId(e.target.value)}
+                className="px-3.5 py-2.5 bg-[#14161E] border border-white/10 rounded-xl text-xs font-semibold text-white/80 focus:outline-none focus:border-[#C5A059] hover:bg-[#1E212B] transition-colors"
+              >
+                {stadiums.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    🏟️ {s.name} ({s.city})
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+
+            {/* Configuration Module CTA for Organizers/Admins */}
+            <StadiumConfigurator onAddStadium={handleAddStadium} currentUserRole={currentRole} />
+
+            {/* RBAC Role Selector Dropdown */}
+            <RoleSelector currentRole={currentRole} onChangeRole={setCurrentRole} />
+          </div>
         </div>
 
-        {/* Action controls: Stadium selector, Configurator & RBAC Role selection */}
-        <div className="flex flex-wrap items-center gap-3 justify-end w-full sm:w-auto">
-          {/* Language Selection Toggle */}
-          <div className="relative flex items-center gap-2 bg-[#14161E] border border-white/10 rounded-xl px-3 py-2.5 focus-within:border-[#C5A059]" id="language-selection-toggle">
-            <Globe className="w-3.5 h-3.5 text-[#C5A059]" />
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as FIFALanguage)}
-              className="bg-transparent border-none text-xs font-semibold text-white/80 focus:outline-none cursor-pointer pr-1"
+        {/* Bottom Row: Navigation Tabs */}
+        <nav className="bg-[#0C0D12] w-full relative z-10" id="master-navigation-tabs">
+          <div className="max-w-[1600px] mx-auto px-6 relative">
+            <div 
+              className="flex items-center gap-6 md:gap-10 overflow-x-auto scrollbar-none scroll-smooth whitespace-nowrap"
+              id="main-view-tabs"
             >
-              {SUPPORTED_LANGUAGES.map((l) => (
-                <option key={l.code} value={l.code} className="bg-[#14161E] text-white">
-                  {l.flag} {l.name}
-                </option>
-              ))}
-            </select>
+              <button
+                onClick={() => {
+                  setActiveTab("MAP");
+                  addNotification("Switched to Map & AI Helper", "info");
+                }}
+                className={`flex items-center gap-2.5 py-4 font-bold text-xs uppercase tracking-[0.12em] border-b-2 transition-all cursor-pointer shrink-0 ${
+                  activeTab === "MAP" 
+                    ? "border-[#C5A059] text-[#C5A059]" 
+                    : "border-transparent text-white/50 hover:text-white"
+                }`}
+              >
+                <Compass className={`w-4 h-4 ${activeTab === "MAP" ? "text-[#C5A059]" : "text-white/50"}`} />
+                <span>🗺️ {t("Interactive Map & AI Helper").toUpperCase()}</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setActiveTab("ANALYTICS");
+                  addNotification("Switched to Predictive Analytics", "info");
+                }}
+                className={`flex items-center gap-2.5 py-4 font-bold text-xs uppercase tracking-[0.12em] border-b-2 transition-all cursor-pointer shrink-0 ${
+                  activeTab === "ANALYTICS" 
+                    ? "border-[#C5A059] text-[#C5A059]" 
+                    : "border-transparent text-white/50 hover:text-white"
+                }`}
+              >
+                <TrendingUp className={`w-4 h-4 ${activeTab === "ANALYTICS" ? "text-[#C5A059]" : "text-white/50"}`} />
+                <span>📈 {t("Predictive Analytics").toUpperCase()}</span>
+              </button>
+     
+              <button
+                onClick={() => {
+                  setActiveTab("DECISION");
+                  addNotification("Switched to AI Decision Support", "info");
+                }}
+                className={`flex items-center gap-2.5 py-4 font-bold text-xs uppercase tracking-[0.12em] border-b-2 transition-all cursor-pointer shrink-0 ${
+                  activeTab === "DECISION" 
+                    ? "border-[#C5A059] text-[#C5A059]" 
+                    : "border-transparent text-white/50 hover:text-white"
+                }`}
+              >
+                <Cpu className={`w-4 h-4 ${activeTab === "DECISION" ? "text-[#C5A059]" : "text-white/50"}`} />
+                <span>🤖 {t("AI Decision Support").toUpperCase()}</span>
+              </button>
+     
+              <button
+                onClick={() => {
+                  setActiveTab("SAFETY");
+                  addNotification("Switched to Incidents & Staff Tasks", "info");
+                }}
+                className={`flex items-center gap-2.5 py-4 font-bold text-xs uppercase tracking-[0.12em] border-b-2 transition-all cursor-pointer shrink-0 ${
+                  activeTab === "SAFETY" 
+                  ? "border-[#C5A059] text-[#C5A059]" 
+                  : "border-transparent text-white/50 hover:text-white"
+                }`}
+              >
+                <Shield className={`w-4 h-4 ${activeTab === "SAFETY" ? "text-[#C5A059]" : "text-white/50"}`} />
+                <span>🚨 {t("Incidents & Staff Tasks").toUpperCase()}</span>
+              </button>
+            </div>
+            {/* Subtle horizontal fading hints for horizontal swipe/scroll overflow indicators */}
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#08090C] to-transparent pointer-events-none md:hidden" />
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#08090C] to-transparent pointer-events-none md:hidden" />
           </div>
-
-          {/* Active Stadium Selection Dropdown */}
-          <div className="relative" id="stadium-selection-dropdown">
-            <select
-              value={selectedStadiumId}
-              onChange={(e) => setSelectedStadiumId(e.target.value)}
-              className="px-3.5 py-2.5 bg-[#14161E] border border-white/10 rounded-xl text-xs font-semibold text-white/80 focus:outline-none focus:border-[#C5A059] hover:bg-[#1E212B] transition-colors"
-            >
-              {stadiums.map((s) => (
-                <option key={s.id} value={s.id}>
-                  🏟️ {s.name} ({s.city})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Configuration Module CTA for Organizers/Admins */}
-          <StadiumConfigurator onAddStadium={handleAddStadium} currentUserRole={currentRole} />
-
-          {/* RBAC Role Selector Dropdown */}
-          <RoleSelector currentRole={currentRole} onChangeRole={setCurrentRole} />
-        </div>
+        </nav>
       </header>
+
+      {/* Swipe Help Guide tip shown on mobile */}
+      <div className="flex md:hidden items-center gap-1.5 text-[10px] text-[#C5A059]/80 font-mono italic mt-2.5 mx-4 sm:mx-6">
+        <span>💡</span>
+        <span>{t("swipe left or right on the screen to switch tabs easily!")}</span>
+      </div>
 
       {/* 2. DYNAMIC LIVE OPERATIONS CONTROL STRIP */}
       <section className="bg-white/5 border-b border-white/10 px-4 sm:px-6 py-4 flex flex-col md:flex-row justify-between gap-4 items-start md:items-center" id="stadium-operations-strip">
@@ -587,72 +710,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Core Tabs Navigator */}
-        <div className="flex border-b border-white/10" id="main-view-tabs">
-          <button
-            onClick={() => setActiveTab("MAP")}
-            className={`flex items-center gap-2 px-5 py-2.5 font-medium text-xs uppercase tracking-[0.1em] border-b-2 transition-all cursor-pointer ${
-              activeTab === "MAP" 
-                ? "border-[#C5A059] text-[#C5A059]" 
-                : "border-transparent text-white/50 hover:text-white"
-            }`}
-          >
-            <Compass className="w-4 h-4" />
-            {t("Interactive Map & AI Helper")}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("ANALYTICS")}
-            className={`flex items-center gap-2 px-5 py-2.5 font-medium text-xs uppercase tracking-[0.1em] border-b-2 transition-all cursor-pointer ${
-              activeTab === "ANALYTICS" 
-                ? "border-[#C5A059] text-[#C5A059]" 
-                : "border-transparent text-white/50 hover:text-white"
-            }`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            {t("Predictive Analytics")}
-          </button>
-
-          <button
-            onClick={() => setActiveTab("DECISION")}
-            className={`flex items-center gap-2 px-5 py-2.5 font-medium text-xs uppercase tracking-[0.1em] border-b-2 transition-all cursor-pointer ${
-              activeTab === "DECISION" 
-                ? "border-[#C5A059] text-[#C5A059]" 
-                : "border-transparent text-white/50 hover:text-white"
-            }`}
-          >
-            <Bot className="w-4 h-4" />
-            {t("AI Decision Support")}
-          </button>
-
-          <button
-            onClick={() => setActiveTab("SAFETY")}
-            className={`flex items-center gap-2 px-5 py-2.5 font-medium text-xs uppercase tracking-[0.1em] border-b-2 transition-all cursor-pointer ${
-              activeTab === "SAFETY" 
-                ? "border-[#C5A059] text-[#C5A059]" 
-                : "border-transparent text-white/50 hover:text-white"
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            {t("Incidents & Staff Tasks")}
-          </button>
-
-          <button
-            onClick={() => setActiveTab("TESTING")}
-            className={`flex items-center gap-2 px-5 py-2.5 font-medium text-xs uppercase tracking-[0.1em] border-b-2 transition-all cursor-pointer ${
-              activeTab === "TESTING" 
-                ? "border-[#C5A059] text-[#C5A059]" 
-                : "border-transparent text-white/50 hover:text-white"
-            }`}
-            id="tab-btn-testing"
-            aria-controls="bento-testing-viewport"
-            aria-selected={activeTab === "TESTING"}
-          >
-            <CheckCircle className="w-4 h-4" />
-            {t("Compliance & Testing")}
-          </button>
-        </div>
-
         {/* Tab contents */}
         <div className="space-y-6" id="active-tab-content-renderer">
           {/* 1. MAP TAB: Contains Interactive Map & StadiumGPT chatbot split view */}
@@ -702,17 +759,6 @@ export default function App() {
                 onUpdateIncident={handleUpdateIncident}
                 onAddTask={handleAddTask}
                 onUpdateTask={handleUpdateTask}
-              />
-            </div>
-          )}
-
-          {/* 5. DIAGNOSTICS, COMPLIANCE & SECURITY SUITE */}
-          {activeTab === "TESTING" && (
-            <div className="animate-in fade-in" id="bento-testing-viewport">
-              <DiagnosticsSuite 
-                stadium={activeStadium} 
-                stadiums={stadiums}
-                currentUserRole={currentRole}
               />
             </div>
           )}
