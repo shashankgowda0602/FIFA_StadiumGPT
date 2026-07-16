@@ -89,6 +89,8 @@ npm run start
 
 ---
 
+
+### Real-Time Operations Flow
 ┌─────────────────────────────────────────────────────────────────┐
 │  OPERATOR UPDATES STADIUM STATE (Crowd Density, Weather, etc.)  │
 └────────────────────┬────────────────────────────────────────────┘
