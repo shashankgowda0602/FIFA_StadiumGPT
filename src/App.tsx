@@ -52,7 +52,7 @@ export default function App() {
   const [stadiums, setStadiums] = React.useState<Stadium[]>([]);
   const [selectedStadiumId, setSelectedStadiumId] = React.useState<string>("");
   const [currentRole, setCurrentRole] = React.useState<UserRole>(UserRole.FOOTBALL_FAN);
-  const [activeTab, setActiveTab] = React.useState<"MAP" | "ANALYTICS" | "DECISION" | "SAFETY">("MAP");
+  const [activeTab, setActiveTab] = React.useState<"MAP" | "ANALYTICS" | "DECISION" | "SAFETY" | "DIAGNOSTICS">("MAP");
   const [loading, setLoading] = React.useState(true);
 
   // Touch Gesture Swiping handlers for dynamic mobile/tablet experience
@@ -72,8 +72,8 @@ export default function App() {
     // Detect horizontal swipes mainly
     if (Math.abs(diffX) > Math.abs(diffY)) {
       if (Math.abs(diffX) > 60) { // Swipe threshold in pixels
-        const tabs: ("MAP" | "ANALYTICS" | "DECISION" | "SAFETY")[] = [
-          "MAP", "ANALYTICS", "DECISION", "SAFETY"
+        const tabs: ("MAP" | "ANALYTICS" | "DECISION" | "SAFETY" | "DIAGNOSTICS")[] = [
+          "MAP", "ANALYTICS", "DECISION", "SAFETY", "DIAGNOSTICS"
         ];
         const currentIndex = tabs.indexOf(activeTab);
         if (diffX > 0) {
@@ -536,6 +536,21 @@ export default function App() {
                 <Shield className={`w-4 h-4 ${activeTab === "SAFETY" ? "text-[#C5A059]" : "text-white/50"}`} />
                 <span>🚨 {t("Incidents & Staff Tasks").toUpperCase()}</span>
               </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab("DIAGNOSTICS");
+                  addNotification("Switched to System Compliance & Diagnostics", "info");
+                }}
+                className={`flex items-center gap-2.5 py-4 font-bold text-xs uppercase tracking-[0.12em] border-b-2 transition-all cursor-pointer shrink-0 ${
+                  activeTab === "DIAGNOSTICS" 
+                  ? "border-[#C5A059] text-[#C5A059]" 
+                  : "border-transparent text-white/50 hover:text-white"
+                }`}
+              >
+                <Settings className={`w-4 h-4 ${activeTab === "DIAGNOSTICS" ? "text-[#C5A059]" : "text-white/50"}`} />
+                <span>🛠️ {t("Compliance & Testing").toUpperCase()}</span>
+              </button>
             </div>
             {/* Subtle horizontal fading hints for horizontal swipe/scroll overflow indicators */}
             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#08090C] to-transparent pointer-events-none md:hidden" />
@@ -759,6 +774,17 @@ export default function App() {
                 onUpdateIncident={handleUpdateIncident}
                 onAddTask={handleAddTask}
                 onUpdateTask={handleUpdateTask}
+              />
+            </div>
+          )}
+
+          {/* 5. DIAGNOSTICS & SYSTEM COMPLIANCE SUITE */}
+          {activeTab === "DIAGNOSTICS" && (
+            <div className="animate-in fade-in animate-duration-300" id="bento-diagnostics-viewport">
+              <DiagnosticsSuite 
+                stadium={activeStadium} 
+                stadiums={stadiums} 
+                currentUserRole={currentRole} 
               />
             </div>
           )}
