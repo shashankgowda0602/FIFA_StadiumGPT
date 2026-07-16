@@ -1,356 +1,130 @@
-# FIFA StadiumGPT - Real-Time Stadium Operations & AI Assistant Platform
+# StadiumGPT OS • FIFA World Cup Digital Venue Platform
 
-## 📋 Project Overview
-
-**FIFA StadiumGPT** is an intelligent, cloud-native operational management system designed for large-scale FIFA World Cup stadium events. It combines real-time facility monitoring, AI-powered decision support, and multilingual assistance to optimize spectator experience, enhance crowd safety, and streamline staff coordination during high-stakes matches.
+StadiumGPT OS is an advanced, high-performance, full-stack digital twin and operational venue management command center tailored for the FIFA World Cup 2026. It integrates interactive spatial mapping (GIS), predictive crowd simulation, an intelligent AI-powered decision support assistant, and an automated system compliance suite.
 
 ---
 
-## 1️⃣ CHOSEN VERTICAL & DOMAIN
+## 🏆 System Profile & Analysis
 
-### **Vertical: Stadium Operations & Event Management**
-
-This solution targets the **FIFA World Cup Infrastructure Management** vertical, focusing on:
-
-- **Real-time operational dashboards** for stadium coordinators
-- **Crowd flow optimization** and dynamic facility management
-- **Incident reporting & emergency response** workflows
-- **Multilingual fan assistance** via conversational AI
-- **Predictive analytics** for resource allocation
-
-### **Use Case: MetLife Stadium (Primary Example)**
-- 82,500-seat capacity
-- Multiple entry gates (A, B, C, D) with real-time queue monitoring
-- Diverse facilities: food courts, restrooms, medical clinics, parking areas
-- Active match-day incidents (beverage spills, medical emergencies)
-- Staff task assignment and incident resolution tracking
+### 1. Chosen Vertical: Smart Stadium Venue Operations & Crowd Management
+The selected vertical is **Smart Stadium Event Operations and Crowd Intelligence** for high-capacity sporting events (e.g., FIFA World Cup 2026 matches hosted at venues like MetLife Stadium or SoFi Stadium). 
+Large-scale tournaments present complex operational challenges: sudden crowd bottlenecks, real-time security threats, catering demand fluctuations, and language accessibility barriers. StadiumGPT OS serves as a centralized operating system (OS) bridging stadium command centers with on-the-ground staff and fans.
 
 ---
 
-## 2️⃣ APPROACH & LOGIC
+### 2. Approach & Logic
 
-### **Architecture Philosophy: Hybrid AI with Graceful Fallback**
-
-The system follows a **dual-mode operation strategy**:
-
-1. **Primary Mode (Cloud-Native AI)**
-   - Google Gemini API (gemini-3.5-flash) for intelligent, context-aware responses
-   - Real-time RAG (Retrieval-Augmented Generation) with live stadium state
-   - JSON schema validation for structured decision support
-   - Multi-language dynamic translation
-
-2. **Fallback Mode (Local Rule-Based Logic)**
-   - Pre-built decision trees for common scenarios (gate congestion, medical incidents, restroom queues)
-   - Offline translation dictionary (5 languages: ES, FR, DE, AR, PT)
-   - Zero latency, zero API dependency
-   - Graceful degradation when Gemini API is unavailable
-
-### **Data Model: Stadium Ecosystem**
+Our engineering approach centers around a **Digital Twin Paradigm** that maps real-time physical stadium data into a responsive, interactive virtual layout. 
 
 ```
-Stadium
-├── Match Schedule (live/scheduled matches with scores)
-├── Facilities (entry gates, food courts, restrooms, medical centers)
-│   ├── Real-time status (OPERATIONAL, CONGESTED)
-│   ├── Queue metrics (length, wait time in minutes)
-│   └── Special attributes (food dietary options, opening hours)
-├── Incidents (maintenance, medical, security)
-│   ├── Severity levels (MINOR, MAJOR, CRITICAL)
-│   ├── Status tracking (ACTIVE, RESPONDING, RESOLVED)
-│   └── Auto-linked staff tasks
-└── Staff Tasks (incident resolution, crowd management)
-    ├── Assigned roles (VOLUNTEER, STADIUM_STAFF, SECURITY)
-    └── Status lifecycle (PENDING → IN_PROGRESS → COMPLETED)
+               ┌──────────────────────────────────────────────────┐
+               │              STADIUM OPERATOR PORTAL             │
+               └───────────────────────┬──────────────────────────┘
+                                       │ Real-time Dispatch
+                                       ▼
+  ┌───────────────────────┐   ┌────────────────────────┐   ┌────────────────────────┐
+  │  Interactive GIS Map  │◄──┤   Operational Server   ├──►│  AI Decision Support   │
+  │  • SVG Node Routing   │   │   • Express API        │   │  • Gemini API Proxy    │
+  │  • Walk Simulations   │   │   • Incident Registry  │   │  • Context RAG Engine  │
+  └───────────────────────┘   └────────────────────────┘   └────────────────────────┘
 ```
 
-### **Core Processing Logic**
-
-#### **1. Input Sanitization**
-```typescript
-sanitizeString(input, maxLength)
-  → Removes HTML tags (XSS protection)
-  → Enforces max length boundaries
-  → Returns clean, safe text
-```
-
-#### **2. Stadium Context Construction**
-- Live match information (current status, score, teams)
-- Facilities list with real-time operational state
-- Active incidents and hazards
-- Staff task queue
-
-#### **3. AI Decision Flow**
-```
-User Query
-  ↓
-Gemini API Call (with full stadium context)
-  ├─ Success: Return AI response
-  └─ Failure: Fallback to getRuleBasedChatReply()
-      ├─ Pattern matching on user message
-      ├─ Filter relevant facilities
-      └─ Generate structured markdown response
-```
-
-#### **4. Recommendation Engine**
-The `/api/gemini/decision-support` endpoint analyzes stadium state and generates proactive actions:
-- **CROWD** category: Redirect flows from congested gates to clear entries
-- **FACILITY** category: Deploy sanitation crews to high-demand restrooms
-- **MEDICAL** category: Dispatch emergency teams with high confidence (98%)
-- **TRAFFIC** category: Route optimization based on historical patterns
-- **SECURITY** category: Incident escalation and protective measures
+#### Key Logic Components:
+- **Spatial Topology Engine**: Stadium layouts are represented as connected topological nodes (entry gates, security points, concession zones, restrooms, seating bowls).
+- **Dynamic Routing & Pathfinding**: Custom path computation calculates paths around the stadium perimeter and pitch. The routing algorithm dynamically adjusts estimated transit times based on **real-time crowd density metrics** and warns operators or fans if proposed paths cross active hazard or closed-facility zones.
+- **Context-Augmented RAG Pipeline**: Rather than relying on generic model training, the assistant relies on a **Retrieval-Augmented Generation (RAG)** approach. The chat engine retrieves current stadium metrics (gate congestion, active incidents, food stall wait times) and injects this data into the prompt context to ensure precise, factual operational replies.
+- **Closed-Loop Safety Dispatch**: Alerts, tasks, and incidents are coupled. An incident logged (e.g., Gate A congestion) automatically updates queue states on the map and prompts the generation of corresponding staff tasks.
 
 ---
 
-## 3️⃣ HOW THE SOLUTION WORKS
+### 3. How the Solution Works
 
-### **REST API Endpoints (12 Core Operations)**
+#### A. Interactive GIS Stadium Map & Live Crowd Router
+- **Interactive Layers**: Visualizes distinct spatial categories (Gates, Concessions, Restrooms, First Aid, Security Controls, Transit Hubs) on a lightweight SVG map canvas.
+- **Transit Walk Simulator**: When a route is planned, a custom walk simulator animates a transit vector on the map in real-time, matching the calculated transit speeds.
+- **Density Adjuster**: Incorporates live stadium-wide crowd density (Low, Moderate, High, Extreme) to dynamically scale pedestrian transit speeds and calculate precise queue/travel times.
+- **Sector Hazard Overlays**: Automatically flags hazard points, closed facilities, or active incident zones directly in the route directions panel.
 
-#### **Stadium Management**
-- `GET /api/stadiums` — Retrieve all stadiums
-- `POST /api/stadiums` — Create new stadium (with validation: capacity 1K–200K seats, lat/lng bounds)
-- `PUT /api/stadiums/:id` — Update operational parameters (crowd density, parking, weather alerts)
+#### B. Live Predictive Analytics & Configurator
+- **Dynamic Capacity Metrists**: Allows operators to set maximum capacities, view ticketing trends, and adjust crowd density parameters.
+- **Incident Alerts Panel**: Tracks metrics like general crowd level, concession queues, and parking availability, with triggers for active emergency alerts and severe weather notifications.
 
-#### **Facility Operations**
-- `POST /api/stadiums/:id/facilities` — Add facilities (gates, food courts, restrooms, medical)
-- `PUT /api/stadiums/:id/facilities/:facId` — Update facility status (queue length, wait times)
+#### C. Closed-Loop Task Board
+- **Incident Dispatch Engine**: Aggregates live stadium issues (e.g., ticket scanner failures, medical distress, overcrowding) categorized by severity (Info, Low, Medium, High, Critical).
+- **Staff Assignment Pipelines**: Generates specific, trackable duties linked to active incidents, allowing dispatchers to assign priority, delegate to departments, and track completion states.
 
-#### **Incident Management**
-- `POST /api/stadiums/:id/incidents` — Report new incident with auto-generated staff task
-- `PUT /api/stadiums/:id/incidents/:incId` — Update incident status (marks related tasks COMPLETED)
+#### D. Context-Aware AI Helper
+- **Stadium-State Prompting**: Generates assistant context by feeding active database states (available facilities, incident rosters, crowd delays) to the Gemini model.
+- **Interactive Fast-Actions**: Prompts users with suggested quick-actions, such as "Locate shortest gate queue" or "Request medical alert details."
 
-#### **Staff Task Management**
-- `POST /api/stadiums/:id/tasks` — Create new task for volunteers/staff
-- `PUT /api/stadiums/:id/tasks/:taskId` — Update task status
-
-#### **AI & Analytics**
-- `GET /api/stadiums/:id/predictive` — Hourly crowd forecasts, risk factor analysis (congestion, evacuation, traffic)
-- `POST /api/gemini/chat` — Conversational AI assistant (gates, restrooms, food, medical info)
-- `POST /api/gemini/decision-support` — Actionable operational recommendations (JSON array)
-- `POST /api/translate` — Batch text translation with fallback dictionary
-
-### **Request/Response Example**
-
-**Chat Query:**
-```bash
-POST /api/gemini/chat
-{
-  "message": "Which gate has the shortest queue?",
-  "stadiumId": "stadium-metlife",
-  "language": "es"
-}
-```
-
-**Rule-Based Fallback Response (Spanish):**
-```markdown
-### Bienvenido a la Guía de Puertas de Entrada de MetLife Stadium
-
-👉 **Recomendación:** Dirígete a **Pepsi Gate D**, que tiene una fila corta.
-El tiempo de espera actual es de solo **4 minutos**.
-
-⚠️ **Advertencia:** Evita **Verizon Gate B** debido a la congestión peatonal
-extrema (tiempo de espera de **45 mins**).
-```
-
-### **Decision Support Example**
-
-**Request:**
-```bash
-POST /api/gemini/decision-support
-{ "stadiumId": "stadium-metlife", "language": "en" }
-```
-
-**Response (Auto-Generated Recommendations):**
-```json
-[
-  {
-    "id": "rec-crowd-1721124567890",
-    "title": "Redirect Crowd Inflow from Congested Gates",
-    "category": "CROWD",
-    "recommendation": "Deploy volunteer guides at Pepsi Gate D (4 min wait) with signage directing overflow from Verizon Gate B (45 min wait).",
-    "reasoning": "Verizon Gate B has critical wait times due to train arrivals at the adjacent rail transit platform. Pepsi Gate D is operational with minimal queue.",
-    "confidenceScore": 92,
-    "actionTriggered": false,
-    "affectedFacilityId": "nj-gate-b"
-  },
-  {
-    "id": "rec-medical-1721124567891",
-    "title": "Dispatch Emergency Medical Team",
-    "category": "MEDICAL",
-    "recommendation": "Deploy First Aid responders with emergency transport to Seating Section 104 immediately.",
-    "reasoning": "Active heat exhaustion incident. Clinic 1 is fully operational and empty.",
-    "confidenceScore": 98,
-    "actionTriggered": true,
-    "affectedFacilityId": "nj-medical-1"
-  }
-]
-```
-
-### **Incident Auto-Response Workflow**
-
-```
-User Reports Incident
-  ↓
-POST /api/stadiums/:id/incidents
-  ├─ Input validation & XSS sanitization
-  ├─ Create Incident record (ACTIVE status)
-  └─ Auto-create linked Staff Task (PENDING)
-      ↓
-      Task visible in staff dashboard
-      ↓
-  PUT /api/stadiums/:id/incidents/:incId
-      ├─ Update incident status (RESPONDING → RESOLVED)
-      └─ Auto-sync related task (IN_PROGRESS → COMPLETED)
-```
+#### E. System Compliance & Testing Suite
+- **Input Sanitization Guard**: A robust regular expression parser (`sanitizeString`) filters scripts and tags, protecting endpoints against XSS injections.
+- **Boundary Validation**: Rejects out-of-bounds metrics (e.g. capacity limits outside 1,000–200k, titles over 80 chars) with structured HTTP responses.
+- **WCAG 2.1 Accessibility Suite**:
+  - *Contrast mode*: Shifts colors to high-contrast borders and deep text palettes.
+  - *Operational Audio Companion*: Features built-in speech synthesis to read live console logs aloud, aiding visually impaired operators in dynamic conditions.
+  - *Semantic ARIA landmarks*: Implements proper tab index and key events for keyboard navigation.
 
 ---
 
-## 4️⃣ ASSUMPTIONS MADE
+### 4. Core Operational Assumptions
+- **Grid Coordinates**: Stadium layouts are modeled on a precise `x, y` relative percentage grid (0 to 100 scale) rather than absolute GPS coordinates. This ensures that the GIS digital-twin component remains highly portable and renders without relying on heavy external mapping library overheads.
+- **Pedestrian Transit Speeds**: Base walking speed is assumed to be 1.4 meters per second. This speed is scaled down dynamically based on crowd density multipliers (Moderate = 80%, High = 50%, Extreme = 20%).
+- **Role-Based Access Control (RBAC)**: Role assumptions (Administrator, Staff, Event Security, Guest) are tracked via reactive state variables in the operator session to enable immediate interface switching during demonstrations.
+- **Web Speech Engine**: It is assumed that the operator’s web browser supports the modern Web Speech Synthesis API for audio output. If unsupported, the console logs the telemetry silently without crashing.
 
-### **Operational Assumptions**
+---
 
-1. **Real-Time Data Freshness**
-   - Facility status (queue length, wait times) are updated by on-ground IoT sensors/staff every 1–5 minutes
-   - Crowd density is derived from ticket scanner and occupancy sensors
-   - Weather/traffic are external API integrations (assumed available)
+## 🛠️ Full-Stack Technical Architecture
 
-2. **Single Stadium State in Memory**
-   - Pre-seeded with 3 demo stadiums (MetLife, Estadio Azteca, SoFi)
-   - Modifications are in-memory only (no persistent database)
-   - **Assumption:** For production, replace with MongoDB/PostgreSQL integration
+### Frontend (Client-side)
+- **Vite + React (TypeScript)**: Powers responsive user-interfaces, structured type interfaces, and real-time interactive mapping.
+- **Tailwind CSS**: Implements the signature **Slate & Gold theme**, providing a high-contrast aesthetic suitable for control room environments.
+- **Lucide Icons**: Integrates consistent visual iconography for facilities, security, and alerts.
 
-3. **API Key Availability**
-   - `GEMINI_API_KEY` environment variable must be set
-   - Falls back to local rule-based logic if not configured (graceful degradation)
-   - **Assumption:** Valid API key is provided via `.env` file or deployment secrets
-
-4. **Language Coverage**
-   - Supported languages: English, Spanish, French, German, Arabic, Portuguese
-   - Fallback dictionary covers 100+ UI labels
-   - **Assumption:** Requests with unsupported languages return English response
-
-5. **Security Model**
-   - Input sanitization removes HTML tags (mitigates XSS)
-   - Max length enforcement prevents buffer overflow-like attacks
-   - **Assumption:** HTTPS/TLS is configured in production (not enforced here)
-   - **Assumption:** API authentication (OAuth2/JWT) is handled by API Gateway (not in this code)
-
-6. **Incident Severity & Response**
-   - Medical incidents automatically trigger highest priority (confidence 98%)
-   - Maintenance incidents are lower priority but still tracked
-   - **Assumption:** All incidents are tracked and routable to responsible teams
-
-7. **Predictive Analytics Accuracy**
-   - Crowd inflow curves are simulated based on typical match-day patterns
-   - Scaling factors apply based on stadium congestion (HIGH → 1.4x multiplier)
-   - **Assumption:** Historical data would refine these models in production
-
-8. **Facility Data Completeness**
-   - Each facility must have: name, category, status, capacity, queue metrics
-   - Optional: foodDetails (vegetarian, halal, popular items)
-   - **Assumption:** Incomplete facility data will use sensible defaults (0 wait time, OPERATIONAL status)
-
-9. **Staff Task Routing**
-   - Tasks are assigned to roles (VOLUNTEER, STADIUM_STAFF) based on incident category
-   - No user authentication; assumes staff access is gated at API gateway layer
-   - **Assumption:** Task assignment logic in production would check staff availability/location
-
-10. **Geographic Accuracy**
-    - Latitude/longitude are stored but not used for geospatial queries
-    - **Assumption:** Frontend maps (GIS) would use these for visualization
-
-11. **Multilingual Translation**
-    - Dynamic translation via Gemini API (preferred)
-    - Fallback to pre-built offline dictionary (comprehensive but potentially incomplete)
-    - **Assumption:** New UI labels added to dictionary will require manual updates
-
-12. **Development vs. Production Mode**
-    - `NODE_ENV !== "production"` uses Vite dev server middleware
-    - Production serves static assets from `/dist` directory
-    - **Assumption:** Build pipeline runs `vite build` before deployment
+### Backend (Server-side)
+- **Express.js API Node**: Operates as the central coordinator for live stadium configurations, incident databases, and the AI agent:
+  - `/api/stadiums` (Saves, updates, and fetches dynamic stadium maps)
+  - `/api/incidents` (Registers active incidents and alerts)
+  - `/api/tasks` (Dispatches tasks directly to staff)
+  - `/api/chat` (Proxies requests to the Gemini API securely, protecting environment keys from browser exposure)
 
 ---
 
 ## 🚀 Getting Started
 
-### **1. Install Dependencies**
+### Prerequisite Environment
+Create a `.env` file in the root directory mirroring `.env.example`:
+```env
+GEMINI_API_KEY=your_confidential_gemini_api_key_here
+```
+
+### Installation
+Retrieve dependencies from the package registry:
 ```bash
 npm install
 ```
 
-### **2. Configure Environment**
-```bash
-# Create .env file
-cat > .env << EOF
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
-NODE_ENV=development
-EOF
-```
-
-### **3. Run Development Server**
+### Start Local Development Server
+Boot up the full-stack development environment:
 ```bash
 npm run dev
-# Server starts at http://localhost:3000
 ```
+The developer server binds securely to host `0.0.0.0` on port `3000`.
 
-### **4. Test Chat Endpoint**
+### Production Compilation
+Build optimized client-side assets and compile the Express backend into a bundle:
 ```bash
-curl -X POST http://localhost:3000/api/gemini/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "Which gate has the shortest queue?",
-    "stadiumId": "stadium-metlife",
-    "language": "en"
-  }'
+npm run build
 ```
+This outputs client-side assets to `dist/` and packages the Express backend into a single `dist/server.cjs` via esbuild.
 
-### **5. Test Decision Support**
+### Production Execution
+Start the production-ready server:
 ```bash
-curl -X POST http://localhost:3000/api/gemini/decision-support \
-  -H "Content-Type: application/json" \
-  -d '{ "stadiumId": "stadium-metlife", "language": "en" }'
+npm run start
 ```
 
 ---
 
-## 📊 Key Features
-
-✅ **Real-time Stadium Operations Dashboard**  
-✅ **Multi-language AI Assistant** (English, Spanish, French, German, Arabic, Portuguese)  
-✅ **Incident Tracking & Auto-Response Workflows**  
-✅ **Predictive Analytics** (crowd forecasts, risk factors)  
-✅ **Staff Task Management** (CRUD operations, status lifecycle)  
-✅ **Facility Queue Monitoring** (wait times, congestion levels)  
-✅ **Graceful API Fallback** (local rule-based logic when AI unavailable)  
-✅ **XSS & Input Validation** (security hardening)  
-✅ **Express.js + TypeScript** (type-safe, production-ready)  
-
----
-
-## 🔐 Security Considerations
-
-- **Input Sanitization:** Removes HTML tags; enforces max length
-- **XSS Prevention:** All user inputs filtered before processing
-- **No SQL/NoSQL Injection:** In-memory data model (no direct database queries)
-- **API Rate Limiting:** Recommended at reverse proxy/API gateway layer
-- **Authentication:** Assumed to be handled upstream (OAuth2/JWT)
-- **HTTPS/TLS:** Must be enforced in production deployment
-
----
-
-## 📝 License
-
-Apache License 2.0 (SPDX-License-Identifier)
-
----
-
-## 👨‍💻 Author
-
-**Developed by:** Shashank (shashankjicm06-del)  
-**Repository:** `FIFA_StadiumGPT`  
-**Last Updated:** July 2026
-
----
-
-## 🙋 Support & Questions
-
-For issues, feature requests, or questions about the architecture, please open an issue in the repository.
+*StadiumGPT OS • Authorized Operator Console • Secure Session • FIFA World Cup Digital Venue Platform*
