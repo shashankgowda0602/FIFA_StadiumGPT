@@ -87,7 +87,6 @@ Spins up the compiled application:
 npm run start
 ```
 
----
 
 
 ### Real-Time Operations Flow
@@ -119,5 +118,7 @@ npm run start
     │ re-renders map, analytics, alerts    │
     │ Notification feed updated            │
     └──────────────────────────────────────┘
+
+---
 
 *StadiumGPT OS • Authorized Operator Console • Secure Session • FIFA World Cup Digital Venue Platform*
