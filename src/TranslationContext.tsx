@@ -79,7 +79,27 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "OPERATIONAL FEED": "FEED OPERATIVO",
     "Live Tweaks:": "Ajustes en vivo:",
     "Located in": "Ubicado en",
-    "FIFA World Cup": "Copa Mundial de la FIFA"
+    "FIFA World Cup": "Copa Mundial de la FIFA",
+    "gis stadium directory": "Directorio de estadios GIS",
+    "all assets": "Todos los activos",
+    "gates": "Puertas",
+    "food courts": "Patios de comida",
+    "restrooms": "Baños",
+    "medical centers": "Centros médicos",
+    "no facilities match your active query.": "Ninguna instalación coincide con su consulta activa.",
+    "search gates, restrooms, food courts...": "Buscar puertas, baños, patios de comida...",
+    "stadiumgpt cognitive decision support": "Soporte de decisiones cognitivas de StadiumGPT",
+    "proactive tournament orchestration models powered by google gemini": "Modelos de orquestación proactiva de torneos impulsados por Google Gemini",
+    "run real-time diagnostics": "Ejecutar diagnósticos en tiempo real",
+    "analyzing crowd inflows and incident queues...": "Analizando flujos de multitud y colas de incidentes...",
+    "no proactive suggestions are active for your chosen category. stadium buffers are operating perfectly.": "No hay sugerencias proactivas activas para su categoría seleccionada. Los amortiguadores del estadio funcionan perfectamente.",
+    "recommendation": "Recomendación",
+    "confidence": "confianza",
+    "cognitive reasoning": "Razonamiento cognitivo",
+    "executed": "Ejecutado",
+    "deploy action": "Desplegar acción",
+    "available to stadium organizers & staff only": "Disponible solo para organizadores y personal del estadio",
+    "activate recommendation": "Activar recomendación"
   },
   fr: {
     "Stadium": "Stade",
@@ -140,7 +160,27 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "OPERATIONAL FEED": "FLUX OPÉRATIONNEL",
     "Live Tweaks:": "Modifications en direct:",
     "Located in": "Situé à",
-    "FIFA World Cup": "Coupe du Monde de la FIFA"
+    "FIFA World Cup": "Coupe du Monde de la FIFA",
+    "gis stadium directory": "Annuaire des stades SIG",
+    "all assets": "Tous les actifs",
+    "gates": "Portes",
+    "food courts": "Aires de restauration",
+    "restrooms": "Toilettes",
+    "medical centers": "Centres médicaux",
+    "no facilities match your active query.": "Aucune installation ne correspond à votre recherche active.",
+    "search gates, restrooms, food courts...": "Rechercher des portes, des toilettes, des aires de restauration...",
+    "stadiumgpt cognitive decision support": "Aide à la décision cognitive de StadiumGPT",
+    "proactive tournament orchestration models powered by google gemini": "Modèles d'orchestration de tournoi proactifs propulsés par Google Gemini",
+    "run real-time diagnostics": "Exécuter des diagnostics en temps réel",
+    "analyzing crowd inflows and incident queues...": "Analyse des flux de foule et des files d'attente d'incidents...",
+    "no proactive suggestions are active for your chosen category. stadium buffers are operating perfectly.": "Aucune suggestion proactive n'est active pour la catégorie choisie. Les tampons du stade fonctionnent parfaitement.",
+    "recommendation": "Recommandation",
+    "confidence": "confiance",
+    "cognitive reasoning": "Raisonnement cognitif",
+    "executed": "Exécuté",
+    "deploy action": "Déployer l'action",
+    "available to stadium organizers & staff only": "Disponible uniquement pour les organisateurs et le personnel du stade",
+    "activate recommendation": "Activer la recommandation"
   },
   de: {
     "Stadium": "Stadion",
@@ -201,7 +241,27 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "OPERATIONAL FEED": "BETRIEBLICHER FEED",
     "Live Tweaks:": "Live-Optimierungen:",
     "Located in": "Befindet sich in",
-    "FIFA World Cup": "FIFA-Weltmeisterschaft"
+    "FIFA World Cup": "FIFA-Weltmeisterschaft",
+    "gis stadium directory": "GIS Stadionverzeichnis",
+    "all assets": "Alle Vermögenswerte",
+    "gates": "Tore",
+    "food courts": "Imbissbereiche",
+    "restrooms": "Toiletten",
+    "medical centers": "Medizinische Zentren",
+    "no facilities match your active query.": "Keine Einrichtungen entsprechen Ihrer aktiven Abfrage.",
+    "search gates, restrooms, food courts...": "Suche Tore, Toiletten, Imbisse...",
+    "stadiumgpt cognitive decision support": "Kognitive Entscheidungshilfe von StadiumGPT",
+    "proactive tournament orchestration models powered by google gemini": "Proaktive Turnier-Orchestrierungsmodelle powered by Google Gemini",
+    "run real-time diagnostics": "Echtzeit-Diagnose ausführen",
+    "analyzing crowd inflows and incident queues...": "Zuschauerströme und Vorfallsschlangen werden analysiert...",
+    "no proactive suggestions are active for your chosen category. stadium buffers are operating perfectly.": "Keine proaktiven Vorschläge sind für Ihre gewählte Kategorie aktiv. Stadionpuffer funktionieren perfekt.",
+    "recommendation": "Empfehlung",
+    "confidence": "Vertrauen",
+    "cognitive reasoning": "Kognitive Argumentation",
+    "executed": "Ausgeführt",
+    "deploy action": "Aktion bereitstellen",
+    "available to stadium organizers & staff only": "Nur für Stadionorganisatoren und Personal verfügbar",
+    "activate recommendation": "Empfehlung aktivieren"
   },
   ar: {
     "Stadium": "الملعب",
@@ -262,7 +322,27 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "OPERATIONAL FEED": "النشرة التشغيلية",
     "Live Tweaks:": "تعديلات مباشرة:",
     "Located in": "يقع في",
-    "FIFA World Cup": "كأس العالم فيفا"
+    "FIFA World Cup": "كأس العالم فيفا",
+    "gis stadium directory": "دليل الاستاد الجغرافي GIS",
+    "all assets": "جميع الأصول",
+    "gates": "البوابات",
+    "food courts": "صالات الطعام",
+    "restrooms": "دورات المياه",
+    "medical centers": "المراكز الطبية",
+    "no facilities match your active query.": "لا توجد مرافق تطابق استفسارك الحالي.",
+    "search gates, restrooms, food courts...": "البحث عن بوابات، دورات مياه، صالات طعام...",
+    "stadiumgpt cognitive decision support": "دعم القرار الإدراكي من StadiumGPT",
+    "proactive tournament orchestration models powered by google gemini": "نماذج تنظيم البطولة الاستباقية بدعم من Google Gemini",
+    "run real-time diagnostics": "تشغيل التشخيصات في الوقت الفعلي",
+    "analyzing crowd inflows and incident queues...": "تحليل تدفقات الجماهير وطوابير الحوادث...",
+    "no proactive suggestions are active for your chosen category. stadium buffers are operating perfectly.": "لا توجد اقتراحات استباقية نشطة للفئة المحددة. الحواجز الاحتياطية للملعب تعمل بشكل مثالي.",
+    "recommendation": "توصية",
+    "confidence": "ثقة",
+    "cognitive reasoning": "التفكير المعرفي",
+    "executed": "تم التنفيذ",
+    "deploy action": "نشر الإجراء",
+    "available to stadium organizers & staff only": "متاح لمنظمي وموظفي الملعب فقط",
+    "activate recommendation": "تفعيل التوصية"
   },
   pt: {
     "Stadium": "Estádio",
@@ -323,7 +403,27 @@ const UI_DICTIONARY: Record<FIFALanguage, Record<string, string>> = {
     "OPERATIONAL FEED": "FEED OPERACIONAL",
     "Live Tweaks:": "Ajustes ao vivo:",
     "Located in": "Localizado em",
-    "FIFA World Cup": "Copa do Mundo da FIFA"
+    "FIFA World Cup": "Copa do Mundo da FIFA",
+    "gis stadium directory": "Diretório GIS de Estádios",
+    "all assets": "Todos os Ativos",
+    "gates": "Portões",
+    "food courts": "Praças de Alimentação",
+    "restrooms": "Banheiros",
+    "medical centers": "Centros Médicos",
+    "no facilities match your active query.": "Nenhuma instalação corresponde à sua pesquisa ativa.",
+    "search gates, restrooms, food courts...": "Buscar portões, banheiros, praças de alimentação...",
+    "stadiumgpt cognitive decision support": "Suporte de Decisão Cognitiva StadiumGPT",
+    "proactive tournament orchestration models powered by google gemini": "Modelos proativos de orquestração de torneios alimentados por Google Gemini",
+    "run real-time diagnostics": "Executar diagnósticos em tempo real",
+    "analyzing crowd inflows and incident queues...": "Analisando fluxos de multidões e filas de incidentes...",
+    "no proactive suggestions are active for your chosen category. stadium buffers are operating perfectly.": "Nenhuma sugestão proativa está ativa para a categoria escolhida. As buffers do estádio estão operando perfeitamente.",
+    "recommendation": "Recomendação",
+    "confidence": "confiança",
+    "cognitive reasoning": "Raciocínio Cognitivo",
+    "executed": "Executado",
+    "deploy action": "Implantar Ação",
+    "available to stadium organizers & staff only": "Disponível apenas para organizadores e equipe do estádio",
+    "activate recommendation": "Ativar recomendação"
   },
 };
 
@@ -349,16 +449,21 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   // Synchronous translation using dictionary
   const t = (text: string): string => {
-    if (language === "en") return text;
+    if (!text || language === "en") return text;
     const langDict = UI_DICTIONARY[language];
-    if (langDict && langDict[text]) {
+    if (!langDict) return text;
+
+    if (langDict[text]) {
       return langDict[text];
     }
-    // Fallback if specific word boundary matches but case differs
-    const trimmed = text.trim();
-    if (langDict && langDict[trimmed]) {
-      return langDict[trimmed];
+
+    // Fallback if specific word boundary matches but case differs (case-insensitive)
+    const lower = text.toLowerCase().trim();
+    const foundKey = Object.keys(langDict).find(k => k.toLowerCase() === lower);
+    if (foundKey) {
+      return langDict[foundKey];
     }
+
     return text;
   };
 

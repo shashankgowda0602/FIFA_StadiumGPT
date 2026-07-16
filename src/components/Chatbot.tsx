@@ -76,14 +76,18 @@ export default function Chatbot({ stadium }: ChatbotProps) {
     
     stopSpeaking();
 
-    // Clean markdown characters for pleasant speech synthesis
+    // Clean markdown characters and special symbols for pleasant speech synthesis
     const cleanText = text
-      .replace(/###/g, "")
-      .replace(/\*\*/g, "")
-      .replace(/-\s/g, "")
-      .replace(/👉/g, "")
-      .replace(/⚠️/g, "Warning:")
-      .substring(0, 300); // truncate for concise speech
+      .replace(/#+/g, "")                         // Remove markdown hashes
+      .replace(/\*/g, "")                         // Remove markdown asterisks (bold/italics)
+      .replace(/`/g, "")                          // Remove markdown backticks
+      .replace(/^\s*[-*+]\s+/gm, "")              // Remove markdown list bullets at start of lines
+      .replace(/[\[\]()]/g, " ")                  // Replace brackets and parentheses with space
+      .replace(/\n+/g, " ")                       // Replace newlines with spaces
+      .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, "")   // Remove emojis and other non-alphanumeric, non-punctuation symbols
+      .replace(/\s+/g, " ")                       // Normalize spaces
+      .trim()
+      .substring(0, 300);                         // Truncate for concise speech
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 1.0;
@@ -268,9 +272,12 @@ export default function Chatbot({ stadium }: ChatbotProps) {
       {/* Chat header */}
       <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-[#C5A059] to-[#A8823E] text-black shadow-lg">
-            <Bot className="w-5 h-5 animate-pulse" />
-          </span>
+          <img
+            src="/src/assets/images/robot_gold_logo_1784202911119.jpg"
+            alt="StadiumGPT Logo"
+            className="w-9 h-9 rounded-xl object-cover border border-[#C5A059]/30 shadow-lg"
+            referrerPolicy="no-referrer"
+          />
           <div>
             <h3 className="font-semibold text-white flex items-center gap-1.5 text-sm">
               StadiumGPT
@@ -310,9 +317,12 @@ export default function Chatbot({ stadium }: ChatbotProps) {
               id={`chat-msg-${msg.id}`}
             >
               {isAi && (
-                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 font-bold shrink-0 text-xs">
-                  AI
-                </span>
+                <img
+                  src="/src/assets/images/robot_gold_logo_1784202911119.jpg"
+                  alt="AI Avatar"
+                  className="w-7 h-7 rounded-lg object-cover border border-[#C5A059]/20 font-bold shrink-0"
+                  referrerPolicy="no-referrer"
+                />
               )}
               <div className="max-w-[85%] flex flex-col gap-1">
                 <div className={`p-3.5 rounded-xl text-xs shadow-md ${

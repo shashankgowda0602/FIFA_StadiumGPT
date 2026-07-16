@@ -1325,7 +1325,7 @@ function getRuleBasedChatReply(message: string, stadium: Stadium, targetLang: st
 
 // 11. AI Decision Support System Endpoint (Produces intelligent operational actions)
 app.post("/api/gemini/decision-support", async (req, res) => {
-  const { stadiumId } = req.body;
+  const { stadiumId, language } = req.body;
   if (!stadiumId) {
     res.status(400).json({ error: "Missing stadiumId" });
     return;
@@ -1337,9 +1337,11 @@ app.post("/api/gemini/decision-support", async (req, res) => {
     return;
   }
 
+  const targetLang = (language || "en").toLowerCase().trim();
+
   if (!ai) {
     // Robust local fallback rule-based decision support system
-    res.json(getRuleBasedDecisionSupport(stadium));
+    res.json(getRuleBasedDecisionSupport(stadium, targetLang));
     return;
   }
 
@@ -1352,7 +1354,7 @@ app.post("/api/gemini/decision-support", async (req, res) => {
       ? stadium.incidents.map(i => `- ${i.title}: Category: ${i.category}, Severity: ${i.severity}, Status: ${i.status}, Section: ${i.section}`).join("\n")
       : "No active safety incidents reported.";
 
-    const prompt = `Analyze the current real-time operations of ${stadium.name} and provide a list of proactive recommendations to improve operations, fan experience, and safety.
+    let prompt = `Analyze the current real-time operations of ${stadium.name} and provide a list of proactive recommendations to improve operations, fan experience, and safety.
 
 STADIUM STATE:
 - Crowd Density: ${stadium.crowdDensity}
@@ -1379,11 +1381,17 @@ Respond ONLY with a JSON array conforming exactly to this structure. Each recomm
   }
 ]`;
 
+    if (targetLang !== "en") {
+      prompt += `\n\nCRITICAL MANDATE: The user has selected the language: "${language}" (code: "${targetLang}").
+You MUST translate all values for "title", "recommendation", and "reasoning" fields strictly into that language.
+Ensure names of teams, stages, or proper nouns (like StadiumGPT or stadium names) remain accurate, but descriptions and directions are fully translated.`;
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: prompt,
       config: {
-        systemInstruction: "You are an Elite Cloud Architect and Stadium AI Decision Support Engine. Output strictly standard valid JSON matching the requested array format. No markdown, no triple backticks.",
+        systemInstruction: `You are an Elite Cloud Architect and Stadium AI Decision Support Engine. Output strictly standard valid JSON matching the requested array format. No markdown, no triple backticks. If target language is non-English, deliver the JSON content in that language.`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.ARRAY,
@@ -1413,26 +1421,53 @@ Respond ONLY with a JSON array conforming exactly to this structure. Each recomm
     res.json(recommendations);
   } catch (err: any) {
     console.error("Gemini AI Decision Support Error (falling back to rules):", err);
-    res.json(getRuleBasedDecisionSupport(stadium));
+    res.json(getRuleBasedDecisionSupport(stadium, targetLang));
   }
 });
 
 
 // Helper function for local decision support fallback
-function getRuleBasedDecisionSupport(stadium: Stadium) {
+function getRuleBasedDecisionSupport(stadium: Stadium, targetLang?: string) {
   const recommendations = [];
+  const lang = (targetLang || "en").toLowerCase().trim();
 
   // Analyze Gate congestion
   const congestedGates = stadium.facilities.filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.CONGESTED);
   const clearGates = stadium.facilities.filter(f => f.category === FacilityCategory.ENTRY_GATE && f.status === FacilityStatus.OPERATIONAL && f.queueLength === QueueLength.SHORT);
 
   if (congestedGates.length > 0 && clearGates.length > 0) {
+    let title = "Redirect Crowd Inflow from Congested Gates";
+    let recommendation = `Redirect incoming fans from ${congestedGates.map(g => g.name).join(", ")} to the clear entries.`;
+    let reasoning = `${congestedGates[0].name} has critical wait times (${congestedGates[0].waitTimeMinutes} mins), while ${clearGates[0].name} is operational with only ${clearGates[0].waitTimeMinutes} mins wait.`;
+
+    if (lang === "es") {
+      title = "Redirigir el flujo de multitud de las puertas congestionadas";
+      recommendation = `Redirigir a los aficionados entrantes de ${congestedGates.map(g => g.name).join(", ")} a las entradas despejadas.`;
+      reasoning = `${congestedGates[0].name} tiene tiempos de espera críticos (${congestedGates[0].waitTimeMinutes} min), mientras que ${clearGates[0].name} está operativo con solo ${clearGates[0].waitTimeMinutes} min de espera.`;
+    } else if (lang === "fr") {
+      title = "Rediriger le flux de foule des portes encombrées";
+      recommendation = `Rediriger les supporters entrants de ${congestedGates.map(g => g.name).join(", ")} vers les entrées dégagées.`;
+      reasoning = `${congestedGates[0].name} a des temps d'attente critiques (${congestedGates[0].waitTimeMinutes} min), tandis que ${clearGates[0].name} est opérationnel avec seulement ${clearGates[0].waitTimeMinutes} min d'attente.`;
+    } else if (lang === "de") {
+      title = "Zuschauerstrom von überlasteten Toren umleiten";
+      recommendation = `Leiten Sie ankommende Fans von ${congestedGates.map(g => g.name).join(", ")} zu den freien Eingängen um.`;
+      reasoning = `${congestedGates[0].name} hat kritische Wartezeiten (${congestedGates[0].waitTimeMinutes} Min.), während ${clearGates[0].name} betriebsbereit ist mit nur ${clearGates[0].waitTimeMinutes} Min. Wartezeit.`;
+    } else if (lang === "ar") {
+      title = "إعادة توجيه تدفق الجماهير من البوابات المزدحمة";
+      recommendation = `إعادة توجيه المشجعين القادمين من ${congestedGates.map(g => g.name).join(", ")} إلى المداخل الشاغرة.`;
+      reasoning = `تحتوي ${congestedGates[0].name} على أوقات انتظار حرجة (${congestedGates[0].waitTimeMinutes} دقيقة)، بينما تعمل ${clearGates[0].name} بوقت انتظار يبلغ ${clearGates[0].waitTimeMinutes} دقيقة فقط.`;
+    } else if (lang === "pt") {
+      title = "Redirecionar fluxo de multidão de portões congestionados";
+      recommendation = `Redirecionar torcedores vindos de ${congestedGates.map(g => g.name).join(", ")} para as entradas liberadas.`;
+      reasoning = `${congestedGates[0].name} tem tempos de espera críticos (${congestedGates[0].waitTimeMinutes} min), enquanto ${clearGates[0].name} está operacional com apenas ${clearGates[0].waitTimeMinutes} min de espera.`;
+    }
+
     recommendations.push({
       id: `rec-crowd-${Date.now()}`,
-      title: "Redirect Crowd Inflow from Congested Gates",
+      title,
       category: "CROWD",
-      recommendation: `Redirect incoming fans from ${congestedGates.map(g => g.name).join(", ")} to the clear entries.`,
-      reasoning: `${congestedGates[0].name} has critical wait times (${congestedGates[0].waitTimeMinutes} mins), while ${clearGates[0].name} is operational with only ${clearGates[0].waitTimeMinutes} mins wait.`,
+      recommendation,
+      reasoning,
       confidenceScore: 92,
       actionTriggered: false,
       affectedFacilityId: congestedGates[0].id
@@ -1442,12 +1477,38 @@ function getRuleBasedDecisionSupport(stadium: Stadium) {
   // Analyze Restrooms
   const congestedRestrooms = stadium.facilities.filter(f => f.category === FacilityCategory.RESTROOM && f.queueLength === QueueLength.LONG);
   if (congestedRestrooms.length > 0) {
+    let title = "Deploy Sanitization Crews to South Restrooms";
+    let recommendation = "Increase sanitation and service frequency at Section 134 restrooms.";
+    let reasoning = "Restroom suite has spiked into CONGESTED status due to nearby match concessions. High volume requires active cleaners.";
+
+    if (lang === "es") {
+      title = "Desplegar equipos de desinfección a los baños del sur";
+      recommendation = "Aumentar la frecuencia de limpieza y servicio en los baños de la Sección 134.";
+      reasoning = "El conjunto de baños ha aumentado a estado CONGESTIONADO debido a las concesiones de partidos cercanas. El alto volumen requiere limpiadores activos.";
+    } else if (lang === "fr") {
+      title = "Déployer des équipes de désinfection aux toilettes sud";
+      recommendation = "Augmenter la fréquence de nettoyage et de service aux toilettes de la Section 134.";
+      reasoning = "La suite de toilettes est passée en statut ENCOMBRÉ en raison des concessions de match à proximité. Le volume élevé nécessite des nettoyeurs actifs.";
+    } else if (lang === "de") {
+      title = "Reinigungsteams für die südlichen Toiletten bereitstellen";
+      recommendation = "Erhöhen Sie die Reinigungs- und Servicefrequenz in den Toiletten von Sektion 134.";
+      reasoning = "Der Toilettenbereich ist aufgrund nahegelegener Verkaufsstände in den Status ÜBERLASTET geraten. Hohes Aufkommen erfordert aktive Reinigungskräfte.";
+    } else if (lang === "ar") {
+      title = "نشر أطقم التعقيم في دورات المياه الجنوبية";
+      recommendation = "زيادة وتيرة التعقيم والخدمة في دورات مياه القسم 134.";
+      reasoning = "ارتفعت حالة دورات المياه إلى مزدحمة بسبب مبيعات المأكولات القريبة. يتطلب الحجم الكبير عمال نظافة نشطين.";
+    } else if (lang === "pt") {
+      title = "Implantar equipes de higienização nos banheiros do sul";
+      recommendation = "Aumentar a frequência de limpeza e serviço nos banheiros da Seção 134.";
+      reasoning = "O conjunto de banheiros subiu para o status CONGESTIONADO devido às concessões de jogos próximas. O alto volume exige limpadores ativos.";
+    }
+
     recommendations.push({
       id: `rec-facility-${Date.now()}`,
-      title: "Deploy Sanitization Crews to South Restrooms",
+      title,
       category: "FACILITY",
-      recommendation: "Increase sanitation and service frequency at Section 134 restrooms.",
-      reasoning: "Restroom suite has spiked into CONGESTED status due to nearby match concessions. High volume requires active cleaners.",
+      recommendation,
+      reasoning,
       confidenceScore: 85,
       actionTriggered: false,
       affectedFacilityId: congestedRestrooms[0].id
@@ -1457,12 +1518,38 @@ function getRuleBasedDecisionSupport(stadium: Stadium) {
   // Analyze Active Incidents
   const activeMedical = stadium.incidents.filter(i => i.category === "Medical" && i.status !== IncidentStatus.RESOLVED);
   if (activeMedical.length > 0) {
+    let title = "Dispatch Emergency Medical Team";
+    let recommendation = "Deploy First Aid responders with emergency transport wheels to Seating Section 104.";
+    let reasoning = `Active heat exhaustion incident reported by staff. Clinic 1 is currently empty and fully operational. Dispatching immediate treatment.`;
+
+    if (lang === "es") {
+      title = "Despachar equipo médico de emergencia";
+      recommendation = "Desplegar socorristas de primeros auxilios con camillas de transporte de emergencia a la sección de asientos 104.";
+      reasoning = `Personal reporta incidente de agotamiento por calor activo. La Clínica 1 está vacía y totalmente operativa. Despachando tratamiento inmediato.`;
+    } else if (lang === "fr") {
+      title = "Dépêcher une équipe médicale d'urgence";
+      recommendation = "Déployer des secouristes de premiers secours avec brancards de transport d'urgence vers la section 104.";
+      reasoning = `Incident d'épuisement par la chaleur actif signalé par le personnel. La clinique 1 est actuellement vide et opérationnelle. Envoi d'un traitement immédiat.`;
+    } else if (lang === "de") {
+      title = "Notfallmedizinisches Team entsenden";
+      recommendation = "Senden Sie Ersthelfer mit Krankentragen zur Tribünensektion 104.";
+      reasoning = `Aktiver Fall von Hitzeschlag vom Personal gemeldet. Klinik 1 ist derzeit leer und voll funktionsfähig. Sofortige Behandlung wird eingeleitet.`;
+    } else if (lang === "ar") {
+      title = "إرسال فريق الطوارئ الطبي";
+      recommendation = "نشر مستجيبي الإسعافات الأولية مع نقالات النقل الطارئ إلى قسم المقاعد 104.";
+      reasoning = `أبلغ الموظفون عن حالة إجهاد حراري نشطة. العيادة 1 فارغة حاليًا وتعمل بكامل طاقتها. إرسال العلاج الفوري.`;
+    } else if (lang === "pt") {
+      title = "Despachar equipe médica de emergência";
+      recommendation = "Enviar socorristas de primeiros socorros com macas de transporte de emergência para a seção de assentos 104.";
+      reasoning = `Incidente de exaustão por calor ativo relatado pela equipe. A Clínica 1 está vazia e totalmente operacional. Despachando atendimento imediato.`;
+    }
+
     recommendations.push({
       id: `rec-medical-${Date.now()}`,
-      title: "Dispatch Emergency Medical Team",
+      title,
       category: "MEDICAL",
-      recommendation: "Deploy First Aid responders with emergency transport wheels to Seating Section 104.",
-      reasoning: `Active heat exhaustion incident reported by staff. Clinic 1 is currently empty and fully operational. Dispatching immediate treatment.`,
+      recommendation,
+      reasoning,
       confidenceScore: 98,
       actionTriggered: true,
       affectedFacilityId: activeMedical[0].facilityId
@@ -1471,12 +1558,38 @@ function getRuleBasedDecisionSupport(stadium: Stadium) {
 
   // Default general recommendation
   if (recommendations.length === 0) {
+    let title = "Proactive Volunteer Reallocation";
+    let recommendation = "Station additional volunteer guides near official Fan Merch Shops.";
+    let reasoning = "Fan shop queue is building up smoothly. Volunteers will speed up queue division and assist spectators with quick payments.";
+
+    if (lang === "es") {
+      title = "Reasignación proactiva de voluntarios";
+      recommendation = "Ubicar guías voluntarios adicionales cerca de las tiendas oficiales de recuerdos de aficionados.";
+      reasoning = "La fila de la tienda de recuerdos está aumentando moderadamente. Los voluntarios agilizarán la división de la fila y ayudarán a los espectadores con pagos rápidos.";
+    } else if (lang === "fr") {
+      title = "Réaffectation proactive des bénévoles";
+      recommendation = "Placer des guides bénévoles supplémentaires près des boutiques de souvenirs officielles.";
+      reasoning = "La file d'attente de la boutique de souvenirs se forme tranquillement. Les bénévoles accéléreront la division de la file et aideront les spectateurs à payer rapidement.";
+    } else if (lang === "de") {
+      title = "Proaktive Umverteilung von Helfern";
+      recommendation = "Stationieren Sie zusätzliche Helfer in der Nähe der offiziellen Fan-Merchandise-Shops.";
+      reasoning = "Die Schlange im Fan-Shop wächst stetig. Helfer werden die Aufteilung beschleunigen und Zuschauern bei schnellen Zahlungen helfen.";
+    } else if (lang === "ar") {
+      title = "إعادة توزيع المتطوعين الاستباقية";
+      recommendation = "تمركز مرشدين متطوعين إضافيين بالقرب من متاجر هدايا المشجعين الرسمية.";
+      reasoning = "طابور متجر الهدايا يتراكم بسلاسة. سيسرع المتطوعون تقسيم الطابور ويساعدون المتفرجين في الدفع السريع.";
+    } else if (lang === "pt") {
+      title = "Realocação proativa de voluntários";
+      recommendation = "Posicionar guias voluntários adicionais perto das lojas oficiais de produtos dos torcedores.";
+      reasoning = "A fila da loja de produtos está crescendo de forma constante. Os voluntários vão agilizar a divisão das filas e ajudar os espectadores com pagamentos rápidos.";
+    }
+
     recommendations.push({
       id: `rec-gen-${Date.now()}`,
-      title: "Proactive Volunteer Reallocation",
+      title,
       category: "CROWD",
-      recommendation: "Station additional volunteer guides near official Fan Merch Shops.",
-      reasoning: "Fan shop queue is building up smoothly. Volunteers will speed up queue division and assist spectators with quick payments.",
+      recommendation,
+      reasoning,
       confidenceScore: 78,
       actionTriggered: false
     });

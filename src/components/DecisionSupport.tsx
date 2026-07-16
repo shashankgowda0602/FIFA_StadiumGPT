@@ -16,6 +16,7 @@ import {
   TrafficCone, 
   RefreshCw 
 } from "lucide-react";
+import { useTranslation } from "../TranslationContext";
 
 interface DecisionSupportProps {
   stadium: Stadium;
@@ -41,9 +42,10 @@ const getConfidenceBadgeColor = (score: number) => {
 };
 
 export default function DecisionSupport({ stadium, onExecuteAction, currentUserRole }: DecisionSupportProps) {
+  const { language, t } = useTranslation();
   const [recommendations, setRecommendations] = React.useState<AIRecommendation[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<"ALL" | "CROWD" | "MEDICAL" | "FACILITY">("ALL");
+  const [activeTab, setActiveTab] = React.useState<"ALL" | "CROWD" | "MEDICAL" | "FACILITY" | "TRAFFIC">("ALL");
 
   const triggerFetchRecommendations = React.useCallback(async (active: boolean) => {
     setLoading(true);
@@ -51,7 +53,7 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
       const response = await fetch("/api/gemini/decision-support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stadiumId: stadium.id })
+        body: JSON.stringify({ stadiumId: stadium.id, language })
       });
 
       if (!response.ok) {
@@ -69,16 +71,16 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
         setLoading(false);
       }
     }
-  }, [stadium.id]);
+  }, [stadium.id, language]);
 
-  // Re-fetch recommendations when stadium changes
+  // Re-fetch recommendations when stadium or language changes
   React.useEffect(() => {
     let active = true;
     triggerFetchRecommendations(active);
     return () => {
       active = false;
     };
-  }, [stadium.id, triggerFetchRecommendations]);
+  }, [stadium.id, language, triggerFetchRecommendations]);
 
   const handleExecute = (rec: AIRecommendation) => {
     onExecuteAction(rec);
@@ -101,9 +103,9 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
         <div>
           <h3 className="font-semibold text-white flex items-center gap-2">
             <Cpu className="w-5 h-5 text-[#C5A059] animate-pulse" />
-            StadiumGPT Cognitive Decision Support
+            {t("stadiumgpt cognitive decision support")}
           </h3>
-          <p className="text-xs text-white/50">Proactive tournament orchestration models powered by Google Gemini</p>
+          <p className="text-xs text-white/50">{t("proactive tournament orchestration models powered by google gemini")}</p>
         </div>
         <button
           onClick={() => triggerFetchRecommendations(true)}
@@ -111,13 +113,13 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
           className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/80 rounded-lg text-xs font-semibold border border-white/10 disabled:text-white/20 transition-colors cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Run Real-time Diagnostics
+          {t("run real-time diagnostics")}
         </button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1" id="support-category-tabs">
-        {(["ALL", "CROWD", "MEDICAL", "FACILITY"] as const).map((tab) => (
+        {(["ALL", "CROWD", "MEDICAL", "FACILITY", "TRAFFIC"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -127,7 +129,7 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
                 : "bg-black/40 text-white/40 border-transparent hover:text-white/80"
             }`}
           >
-            {tab}
+            {t(tab.toLowerCase())}
           </button>
         ))}
       </div>
@@ -136,11 +138,11 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
       {loading ? (
         <div className="py-12 flex flex-col items-center justify-center gap-3">
           <div className="w-10 h-10 border-4 border-[#C5A059]/20 border-t-[#C5A059] rounded-full animate-spin" />
-          <span className="text-xs text-white/40 font-mono">Analyzing crowd inflows and incident queues...</span>
+          <span className="text-xs text-white/40 font-mono">{t("analyzing crowd inflows and incident queues...")}</span>
         </div>
       ) : filteredRecs.length === 0 ? (
         <div className="py-8 text-center text-white/40 text-xs bg-black/40 border border-white/10 border-dashed rounded-lg">
-          No proactive suggestions are active for your chosen category. Stadium buffers are operating perfectly.
+          {t("no proactive suggestions are active for your chosen category. stadium buffers are operating perfectly.")}
         </div>
       ) : (
         <div className="space-y-4" id="ai-recs-list">
@@ -162,10 +164,10 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] font-bold text-white/40 uppercase font-mono tracking-wider">
-                        {rec.category} RECOMMENDATION
+                        {t(rec.category.toLowerCase())} {t("recommendation")}
                       </span>
                       <span className={`inline-flex items-center text-[10px] font-bold font-mono px-1.5 py-0.5 rounded border ${getConfidenceBadgeColor(rec.confidenceScore)}`}>
-                        {rec.confidenceScore}% confidence
+                        {rec.confidenceScore}% {t("confidence")}
                       </span>
                     </div>
                     <h4 className="font-semibold text-sm text-white mt-1 mb-1 truncate">{rec.title}</h4>
@@ -175,7 +177,7 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
                     
                     {/* Reasoning Section */}
                     <div className="mt-2.5 space-y-1">
-                      <span className="block text-[9px] font-black text-white/30 uppercase tracking-widest">Cognitive Reasoning</span>
+                      <span className="block text-[9px] font-black text-white/30 uppercase tracking-widest">{t("cognitive reasoning")}</span>
                       <p className="text-[11px] text-white/50 leading-relaxed italic">{rec.reasoning}</p>
                     </div>
                   </div>
@@ -186,7 +188,7 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
                   {rec.actionTriggered ? (
                     <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/20 rounded-lg text-xs font-bold font-mono">
                       <CheckCircle className="w-3.5 h-3.5" />
-                      Executed
+                      {t("executed")}
                     </span>
                   ) : (
                     <button
@@ -195,12 +197,12 @@ export default function DecisionSupport({ stadium, onExecuteAction, currentUserR
                       className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-[#C5A059] hover:bg-[#D8B775] disabled:bg-white/5 disabled:text-white/20 disabled:border-transparent text-black font-semibold rounded-lg text-xs transition-all cursor-pointer shadow-lg shadow-[#C5A059]/10"
                       title={
                         currentUserRole === UserRole.FOOTBALL_FAN || currentUserRole === UserRole.VOLUNTEER
-                          ? "Available to Stadium Organizers & Staff only"
-                          : "Activate recommendation"
+                          ? t("available to stadium organizers & staff only")
+                          : t("activate recommendation")
                       }
                     >
                       <Zap className="w-3.5 h-3.5" />
-                      Deploy Action
+                      {t("deploy action")}
                     </button>
                   )}
                 </div>

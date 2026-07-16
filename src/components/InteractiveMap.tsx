@@ -33,6 +33,7 @@ import {
   ShieldAlert,
   Check
 } from "lucide-react";
+import { useTranslation } from "../TranslationContext";
 
 // Render Category colors
 const getCategoryColor = (category: FacilityCategory) => {
@@ -88,6 +89,7 @@ interface InteractiveMapProps {
 }
 
 export default function InteractiveMap({ stadium, onUpdateFacility, currentUserRole }: InteractiveMapProps) {
+  const { language, t } = useTranslation();
   const [filterCategory, setFilterCategory] = React.useState<string>("ALL");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedFacility, setSelectedFacility] = React.useState<Facility | null>(null);
@@ -434,10 +436,10 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-white flex items-center gap-2">
               <Compass className="w-5 h-5 text-[#C5A059]" />
-              GIS Stadium Directory
+              {t("gis stadium directory")}
             </h3>
             <span className="text-[10px] bg-white/5 border border-white/10 text-[#C5A059] px-2 py-0.5 rounded font-semibold font-mono">
-              {stadium.facilities.length} ASSETS
+              {stadium.facilities.length} {t("assets").toUpperCase()}
             </span>
           </div>
  
@@ -446,7 +448,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
             <Search className="absolute left-3.5 top-3 w-4 h-4 text-white/40" />
             <input
               type="text"
-              placeholder="Search gates, restrooms, food courts..."
+              placeholder={t("search gates, restrooms, food courts...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-black border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-[#C5A059]/50 transition-colors"
@@ -463,7 +465,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   : "bg-white/5 text-white/70 border-white/5 hover:bg-white/10"
               }`}
             >
-              All Assets
+              {t("all assets")}
             </button>
             <button
               onClick={() => setFilterCategory(FacilityCategory.ENTRY_GATE)}
@@ -473,7 +475,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   : "bg-white/5 text-white/70 border-white/5 hover:bg-white/10"
               }`}
             >
-              Gates
+              {t("gates")}
             </button>
             <button
               onClick={() => setFilterCategory(FacilityCategory.FOOD_COURT)}
@@ -483,7 +485,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   : "bg-white/5 text-white/70 border-white/5 hover:bg-white/10"
               }`}
             >
-              Food Courts
+              {t("food courts")}
             </button>
             <button
               onClick={() => setFilterCategory(FacilityCategory.RESTROOM)}
@@ -493,7 +495,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   : "bg-white/5 text-white/70 border-white/5 hover:bg-white/10"
               }`}
             >
-              Restrooms
+              {t("restrooms")}
             </button>
             <button
               onClick={() => setFilterCategory(FacilityCategory.MEDICAL_CENTER)}
@@ -503,7 +505,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
                   : "bg-white/5 text-white/70 border-white/5 hover:bg-white/10"
               }`}
             >
-              Medical Centers
+              {t("medical centers")}
             </button>
           </div>
  
@@ -511,7 +513,7 @@ export default function InteractiveMap({ stadium, onUpdateFacility, currentUserR
           <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1" id="map-assets-scroll">
             {filteredFacilities.length === 0 ? (
               <div className="text-center py-6 text-white/40 text-xs">
-                No facilities match your active query.
+                {t("no facilities match your active query.")}
               </div>
             ) : (
               filteredFacilities.map((fac) => {

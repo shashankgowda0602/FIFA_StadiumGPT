@@ -353,9 +353,12 @@ export default function App() {
         {/* Logo & Match Ticker */}
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
           <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-tr from-[#C5A059] to-[#FFD700] text-black shadow-[0_0_15px_rgba(197,160,89,0.3)] font-bold text-sm">
-              S
-            </span>
+            <img
+              src="/src/assets/images/robot_gold_logo_1784202911119.jpg"
+              alt="StadiumGPT Logo"
+              className="w-8 h-8 rounded-lg object-cover border border-[#C5A059]/30 shadow-[0_0_15px_rgba(197,160,89,0.3)]"
+              referrerPolicy="no-referrer"
+            />
             <div className="text-left">
               <h1 className="font-light tracking-[0.2em] uppercase text-white text-base leading-none">
                 Stadium<span className="font-bold text-[#C5A059]">GPT</span>
