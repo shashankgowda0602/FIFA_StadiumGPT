@@ -4,6 +4,10 @@ StadiumGPT OS is an advanced, high-performance, full-stack digital twin and oper
 
 ---
 
+### view website: https://ais-pre-t4grgocsdsbbspdtnrqvv5-129129605209.asia-southeast1.run.app
+
+---
+
 ## 🏆 System Profile & Analysis
 
 ### 1. Chosen Vertical: Smart Stadium Venue Operations & Crowd Management
